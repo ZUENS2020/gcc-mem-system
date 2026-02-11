@@ -2,6 +2,16 @@
 
 Git-Context-Controller (GCC) memory system with MCP integration. Manages structured memory with git-backed version control.
 
+## ⚠️ Important: Use English Only
+
+**All text values (goal, todo, purpose, log_entries, contribution, etc.) should be in English only.**
+
+Chinese characters may cause encoding errors when passed through MCP tools. The system supports UTF-8 storage, but the MCP protocol layer has limitations with non-ASCII characters on Windows.
+
+Example:
+- ✅ Good: `goal: "Implement user authentication"`
+- ❌ Bad: `goal: "实现用户认证"`
+
 ## Quick Start
 
 ### Docker Compose (Recommended)
@@ -15,11 +25,11 @@ The service will be available at `http://localhost:8000`.
 ### Docker Run
 
 ```bash
-docker build -t gcc-skill:latest .
+docker build -t gcc-mcp:latest .
 docker volume create gcc_data
 docker run -d --name gcc -p 8000:8000 \
   -v gcc_data:/data \
-  gcc-skill:latest
+  gcc-mcp:latest
 ```
 
 ## Environment Variables
@@ -44,7 +54,7 @@ Set a custom session ID:
 docker run -d --name gcc -p 8000:8000 \
   -v gcc_data:/data \
   -e GCC_SESSION_ID=my-custom-session \
-  gcc-skill:latest
+  gcc-mcp:latest
 ```
 
 Data will be stored under `/data/my-custom-session/.GCC/`.
@@ -103,12 +113,14 @@ Create a memory checkpoint.
 {
   "root": "project-path",
   "branch": "feature-branch",
-  "contribution": "What was accomplished",
-  "log_entries": ["Observation 1", "Action 1"],
-  "metadata_updates": {"key": "value"},
+  "contribution": "Implemented login page with form validation",
+  "log_entries": ["Created login form", "Added password validation", "Tested authentication flow"],
+  "metadata_updates": {"status": "completed"},
   "session_id": "my-session"
 }
 ```
+
+**Note:** All string values must be in English to avoid encoding issues.
 
 ### POST /context
 Retrieve structured context.

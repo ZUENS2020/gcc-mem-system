@@ -1,5 +1,5 @@
 [project]
-name = "gcc-skill"
+name = "gcc-mcp"
 version = "0.1.0"
 description = "HTTP API server implementing Git-Context-Controller (GCC) memory system"
 requires-python = ">=3.9"
@@ -18,8 +18,8 @@ dev = [
 ]
 
 [project.scripts]
-gcc-skill = "gcc_skill.server:main"
-gcc-mcp = "gcc_skill.mcp_proxy:main"
+gcc-mcp = "gcc_mcp.mcp_proxy:main"
+gcc-server = "gcc_mcp.server:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
