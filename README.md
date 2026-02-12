@@ -11,9 +11,7 @@
 
 *Structured memory management for AI agents with MCP (Model Context Protocol) integration*
 
-[Quick Start](#-quick-start) • [Features](#-features) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Examples](#-usage-examples)
-
-</div>
+[Quick Start](#quick-start) • [Features](#-features) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Examples](#-usage-examples)
 
 ---
 
@@ -28,8 +26,7 @@
 - [Data Structure](#-data-structure)
 - [MCP Integration](#-mcp-integration)
 - [Configuration](#-configuration)
-- [Troubleshooting](#-troubleshooting)
-- [License](#-license)
+- [Development](#-development)
 
 ---
 
@@ -61,10 +58,7 @@ GCC provides a **git-like memory system** that makes this possible!
 ### Core Capabilities
 
 ```
-
               GCC Context Controller
-
-
   📝 Initialize    →  Set project goals & todos
   🌿 Branch        →  Create isolated work contexts
   💾 Commit        →  Save progress checkpoints
@@ -72,8 +66,6 @@ GCC provides a **git-like memory system** that makes this possible!
   🔀 Merge         →  Combine branch contexts
   📊 Log           →  Record detailed action logs
   🔍 Diff          →  Compare memory versions
-
-
 ```
 
 ### Key Benefits
@@ -84,7 +76,7 @@ GCC provides a **git-like memory system** that makes this possible!
 | 🔄 **Branch System** | Work on multiple features independently |
 | 📚 **Version History** | Full audit trail of all memory changes |
 | 🏷️ **Metadata Support** | Store structured data alongside context |
-| 🔐 **Thread-Safe** | File locking prevents data corruption |
+| 🔒 **Thread-Safe** | File locking prevents data corruption |
 | 🌐 **HTTP API** | Easy integration with any client |
 
 ---
@@ -95,88 +87,77 @@ GCC provides a **git-like memory system** that makes this possible!
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         AI Agent / Client                        │
-│                    (Claude, Custom Apps, etc.)                   │
+│                    AI Agent / Client                        │
+│                (Claude, Custom Apps, etc.)                   │
 └────────────────────┬─────────────────────────────────────────────┘
-                     │
                      │ MCP Protocol / HTTP API
-                     │
-┌────────────────────▼───────────────────────────────────────────┐
-│                      GCC Context Controller                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ MCP Proxy    │  │  FastAPI     │  │  Commands    │          │
-│  │  (stdio)     │──│   Server     │──│   Layer      │          │
-│  └──────────────┘  └──────────────┘  └──────┬───────┘          │
-│                                             │                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────▼───────┐          │
-│  │   Storage    │──│  Git Ops     │──│    Lock      │          │
-│  │   Manager    │  │  (libgit2)   │  │   Manager    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└────────────────────┬───────────────────────────────────────────┘
-                     │
-                     │ File System
-                     │
-┌────────────────────▼────────────────────────────────────────────┐
-│                      Persistent Storage                         │
-│  /data/<session_id>/.GCC/                                       │
-│    ├── sessions/<session_id>/                                   │
-│    │   ├── main.md                  (Goals & Todos)             │
-│    │   └── branches/<branch>/                                   │
-│    │       ├── commit.md            (Commit History)            │
-│    │       ├── log.md               (Action Logs)               │
-│    │       └── metadata.yaml        (Structured Data)           │
-│    └── .git/                        (Version Control)           │
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────┼─────────────────────────────────────────────┘
+                     ▼
+              ┌─────────────────────────────┐
+              │   GCC Context Controller    │
+              └─────────────────────────────┘
+       ┌──────────┬──────────────┬─────────┐
+       │ MCP Proxy │ FastAPI     │ Commands │
+       │  (stdio)  │──│   │   │
+       │           │   │   │   │
+┌──────┴──┬─────────┴──┬─────┴────────┐
+│    │   │   │   │   │            │
+│    │   │   │   │   ▼            │
+│    │   │   │   │   Storage    │   │
+│    │   │   │   │   Git Ops   │   │
+│    │   │   │   │   Lock      │   │
+│    │   │   │   └─────────────┘   │
+└────────┴─────────────────────────────┘
+```
+
+### Data Structure
+
+```
+/data/<session_id>/                     # Session root
+└── .GCC/                             # GCC system root
+    ├── sessions/<session_id>/           # Session data
+    │   ├── main.md                     # Goals & todos
+    │   └── branches/<branch>/          # Feature branches
+    │       ├── commit.md              # Commit history
+    │       ├── log.md                  # Action logs
+    │       └── metadata.yaml           # Structured data
+    └── .git/                        # Version control
 ```
 
 ### Workflow: From Init to Context Retrieval
 
 ```
-    ┌─────────┐
-    │  START  │
-    └────┬────┘
-         │
-         ▼
-    ┌────────────────┐
-    │  POST /init    │  Initialize project with goal & todos
-    │  Creates:      │
-    │  • main.md     │
-    │  • git repo    │
-    └────┬───────────┘
-         │
-         ▼
-    ┌────────────────┐
-    │ POST /branch   │  Create feature branch for specific work
-    │  Creates:      │
-    │  • branch dir  │
-    │  • branch docs │
-    └────┬───────────┘
-         │
-         ▼
-    ┌────────────────┐
-    │ POST /commit   │  Save progress checkpoint
-    │  Updates:      │
-    │  • commit.md   │
-    │  • log.md      │
-    │  • metadata    │
-    │  • git commit  │
-    └────┬───────────┘
-         │
-         ▼
-    ┌────────────────┐
-    │ POST /context  │  Retrieve all relevant context
-    │  Returns:      │
-    │  • goal        │
-    │  • todos       │
-    │  • commits     │
-    │  • logs        │
-    │  • metadata    │
-    └────┬───────────┘
-         │
-         ▼
-    ┌─────────┐
-    │   END   │
-    └─────────┘
+┌─────────┐
+│ START  │
+└────┬───┘
+     │
+     ▼
+┌────────────────────▼───────────────────────────────┐
+│ POST /init     │ Initialize project with goal & todos   │
+│                 │ Creates: main.md, git repo            │
+└─────────────────────────┬───────────────────────────────────┘
+                      │
+                      ▼
+         ┌─────────────────────────────────┐
+         │ POST /branch  │ Create feature branch       │
+         │                 │ Creates: branch dir, docs   │
+         └─────────────────────────┬───────────┘
+                             │
+                             ▼
+                    ┌──────────────────────────────────────┐
+                    │ POST /commit  │ Save progress checkpoint    │
+                    │                 │ Updates: commit.md, log.md   │
+                    │                 │ Creates: git commit          │
+                    └─────────────────────────┬───────────┘
+                                         │
+                                         ▼
+                              ┌──────────────────────────────────┐
+                              │ POST /context  │ Retrieve full context      │
+                              │                 │ Returns: goal, todos,       │
+                              │                 │   commits, logs, metadata│
+                              └─────────────────────────┬───────────┘
+                                                  │
+                                              END
 ```
 
 ---
@@ -188,49 +169,26 @@ GCC provides a **git-like memory system** that makes this possible!
 - **Docker** and **Docker Compose** (recommended)
 - OR **Python 3.9+** (for local development)
 
-### Method 1: Docker Compose (Recommended) ⭐
+### Method 1: Docker Compose (Recommended)
 
 Perfect for production use and quick setup:
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/ZUENS2020/gcc-mem-system.git
 cd gcc-mem-system
 
-# Start the service
-docker compose up -d --build
+# Start service
+docker compose up -d
 
 # Verify it's running
-curl http://localhost:8000/docs
+curl http://localhost:8000/health
 ```
 
-✅ **Service available at:** `http://localhost:8000`  
+✅ **Service available at:** `http://localhost:8000`
 📚 **API Documentation:** `http://localhost:8000/docs`
 
-### Method 2: Docker Run
-
-For more control over configuration:
-
-```bash
-# Build the image
-docker build -t gcc-mcp:latest .
-
-# Create a volume for persistent data
-docker volume create gcc_data
-
-# Run the container
-docker run -d \
-  --name gcc \
-  -p 8000:8000 \
-  -v gcc_data:/data \
-  -e GCC_SESSION_ID=my-session \
-  gcc-mcp:latest
-
-# Check logs
-docker logs gcc
-```
-
-### Method 3: Local Development
+### Method 2: Local Development
 
 For development and testing:
 
@@ -238,75 +196,64 @@ For development and testing:
 # Install dependencies
 pip install -e .
 
-# Run the server
+# Run server
 gcc-server
-# OR
-uvicorn gcc_mcp.server:app --reload --port 8000
 ```
 
 ---
 
 ## 💡 Usage Examples
 
-### Example 1: Basic Project Setup
+### Example 1: Initialize Project
 
 ```bash
-# Initialize a new project
+# Initialize a new project (no root needed!)
 curl -X POST http://localhost:8000/init \
   -H "Content-Type: application/json" \
   -d '{
-    "root": "/workspace/my-project",
-    "goal": "Build a user authentication system",
+    "goal": "Build a REST API server",
     "todo": [
       "Design database schema",
-      "Implement JWT authentication",
-      "Create login/signup endpoints",
-      "Add password reset functionality"
+      "Implement CRUD endpoints",
+      "Add authentication middleware"
     ],
-    "session_id": "auth-project"
+    "session_id": "api-project"
   }'
 ```
 
 **Response:**
 ```json
 {
-  "gcc_root": "/data/auth-project/.GCC",
-  "session": "auth-project",
-  "main": "/data/auth-project/.GCC/sessions/auth-project/main.md"
+  "gcc_root": "/data/sessions/api-project/.GCC",
+  "session": "api-project",
+  "main": "/data/sessions/api-project/.GCC/sessions/api-project/main.md"
 }
 ```
 
 ### Example 2: Feature Branch Workflow
 
 ```bash
-# Create a branch for JWT implementation
+# Create a branch for feature work
 curl -X POST http://localhost:8000/branch \
   -H "Content-Type: application/json" \
   -d '{
-    "root": "/workspace/my-project",
-    "branch": "jwt-auth",
-    "purpose": "Implement JWT token generation and validation",
-    "session_id": "auth-project"
+    "branch": "user-auth",
+    "purpose": "Implement JWT-based authentication",
+    "session_id": "api-project"
   }'
 
 # Make progress and commit
 curl -X POST http://localhost:8000/commit \
   -H "Content-Type: application/json" \
   -d '{
-    "root": "/workspace/my-project",
-    "branch": "jwt-auth",
-    "contribution": "Implemented JWT token generation with refresh tokens",
+    "branch": "user-auth",
+    "contribution": "Implemented JWT token generation with refresh mechanism",
     "log_entries": [
       "Created JWT utility functions",
       "Added token expiration logic",
-      "Implemented refresh token mechanism",
-      "Added unit tests for token validation"
+      "Implemented refresh token mechanism"
     ],
-    "metadata_updates": {
-      "status": "completed",
-      "test_coverage": "95%"
-    },
-    "session_id": "auth-project"
+    "session_id": "api-project"
   }'
 ```
 
@@ -317,34 +264,23 @@ curl -X POST http://localhost:8000/commit \
 curl -X POST http://localhost:8000/context \
   -H "Content-Type: application/json" \
   -d '{
-    "root": "/workspace/my-project",
-    "branch": "jwt-auth",
-    "session_id": "auth-project"
+    "branch": "user-auth",
+    "session_id": "api-project"
   }'
 ```
 
 **Response:**
 ```json
 {
-  "session": "auth-project",
-  "goal": "Build a user authentication system",
+  "session": "api-project",
+  "main": "# Goal: Build a REST API server...",
+  "goal": "Build a REST API server",
   "todo": ["Design database schema", "..."],
-  "branch": "jwt-auth",
-  "purpose": "Implement JWT token generation and validation",
-  "commits": [
-    {
-      "contribution": "Implemented JWT token generation with refresh tokens",
-      "timestamp": "2026-02-11T10:30:00Z"
-    }
-  ],
-  "logs": [
-    "Created JWT utility functions",
-    "Added token expiration logic",
-    "..."
-  ],
-  "metadata": {
-    "status": "completed",
-    "test_coverage": "95%"
+  "branches": ["user-auth"],
+  "branch": {
+    "name": "user-auth",
+    "purpose": "Implement JWT-based authentication",
+    "commits": [...]
   }
 }
 ```
@@ -363,59 +299,89 @@ curl -X POST http://localhost:8000/context \
 | `POST` | `/context` | Retrieve structured context |
 | `POST` | `/merge` | Merge branch into another |
 | `POST` | `/log` | Add log entries |
-| `GET` | `/diff` | View changes between commits |
 | `GET` | `/history` | Get commit history |
+| `POST` | `/diff` | View changes between commits |
+| `POST` | `/show` | Show file content at ref |
+| `POST` | `/reset` | Reset repository to ref |
 
 ### POST /init
 
-**Initialize a project session**
+**Initialize a new project session**
+
+All paths are automatically managed by the server using `session_id`. No need to specify root paths.
 
 ```json
 {
-  "root": "project-path",           // Required: Project root path
-  "goal": "Project goal",            // Optional: High-level objective
-  "todo": ["task1", "task2"],        // Optional: Task list
-  "session_id": "my-session"         // Optional: Session identifier
+  "goal": "string",           // Optional: Project goal
+  "todo": ["string"],        // Optional: Task list
+  "session_id": "string"       // Optional: Auto-generated if not provided
+}
+```
+
+**Response:**
+```json
+{
+  "gcc_root": "/data/sessions/{session}/.GCC",
+  "session": "{session}",
+  "main": "/data/sessions/{session}/.GCC/sessions/{session}/main.md"
 }
 ```
 
 ### POST /branch
 
-**Create a new work branch**
+**Create a new memory branch**
 
 ```json
 {
-  "root": "project-path",            // Required: Project root path
-  "branch": "feature-name",          // Required: Branch name
-  "purpose": "Branch description",   // Required: Purpose of branch
-  "session_id": "my-session"         // Optional: Session identifier
+  "branch": "string",           // Required: Branch name
+  "purpose": "string",          // Required: Branch description
+  "session_id": "string"         // Optional: Uses default if not provided
 }
 ```
 
 ### POST /commit
 
-**Save progress checkpoint**
+**Save a progress checkpoint**
 
 ```json
 {
-  "root": "project-path",                    // Required: Project root path
-  "branch": "feature-name",                  // Required: Branch name
-  "contribution": "What was achieved",       // Required: Summary of work
-  "log_entries": ["action1", "action2"],     // Optional: Detailed logs
-  "metadata_updates": {"key": "value"},      // Optional: Structured data
-  "session_id": "my-session"                 // Optional: Session identifier
+  "branch": "string",                     // Required: Branch name
+  "contribution": "string",             // Required: What was achieved
+  "log_entries": ["string"],            // Optional: Action log items
+  "metadata_updates": {"key": "value"},  // Optional: Structured data
+  "update_main": "string",              // Optional: Text to append to main.md
+  "session_id": "string"                 // Optional: Session identifier
 }
 ```
 
 ### POST /context
 
-**Retrieve full context**
+**Retrieve structured context**
 
 ```json
 {
-  "root": "project-path",            // Required: Project root path
-  "branch": "feature-name",          // Optional: Specific branch
-  "session_id": "my-session"         // Optional: Session identifier
+  "branch": "string",           // Optional: Specific branch
+  "commit_id": "string",      // Optional: Specific commit
+  "log_tail": 1,              // Optional: Number of recent log entries
+  "metadata_segment": "string", // Optional: Metadata key to retrieve
+  "session_id": "string"         // Optional: Session identifier
+}
+```
+
+**Response:**
+```json
+{
+  "session": "string",
+  "main": "# Goal: ...\n## Todo\n- ...",
+  "goal": "string",
+  "todo": ["string"],
+  "branches": ["string"],
+  "branch": {
+    "name": "string",
+    "purpose": "string",
+    "commits": [...],
+    "recent_commits": ["string"]
+  }
 }
 ```
 
@@ -426,22 +392,15 @@ curl -X POST http://localhost:8000/context \
 ### File System Layout
 
 ```
-/data/
-└── <session_id>/              # Isolated session directory
-    └── .GCC/                  # GCC memory root
-        ├── .git/              # Git repository for version control
-        └── sessions/
-            └── <session_id>/  # Session-specific data
-                ├── main.md    # 📝 Project goals and todo list
-                └── branches/
-                    ├── main/
-                    │   ├── commit.md      # 💾 Commit history
-                    │   ├── log.md         # 📋 Action logs
-                    │   └── metadata.yaml  # 🏷️ Structured metadata
-                    └── feature-x/
-                        ├── commit.md
-                        ├── log.md
-                        └── metadata.yaml
+/data/<session_id>/                     # Auto-managed session root
+└── .GCC/                             # GCC system root
+    ├── sessions/<session_id>/           # Session-specific data
+    │   ├── main.md                     # Project goals and todo list
+    │   └── branches/<branch>/          # Feature branches
+    │       ├── commit.md              # Commit history and progress
+    │       ├── log.md                  # Detailed action logs
+    │       └── metadata.yaml           # Structured metadata storage
+    └── .git/                        # Git repository for version control
 ```
 
 ### File Contents
@@ -449,37 +408,43 @@ curl -X POST http://localhost:8000/context \
 #### main.md
 ```markdown
 # Goal
+
 Build a user authentication system
 
-# TODO
+## Todo
+
 - [x] Design database schema
 - [ ] Implement JWT authentication
-- [ ] Create login/signup endpoints
 - [ ] Add password reset functionality
 ```
 
 #### commit.md
 ```markdown
-## 2026-02-11T10:30:00Z
-Implemented JWT token generation with refresh tokens
+# Branch: user-auth
 
-## 2026-02-10T15:20:00Z
-Created database schema for users table
-```
+=== Commit ===
+Commit ID: abc123
+Timestamp: 2026-02-12T10:30:00Z
 
-#### log.md
-```markdown
-- Created JWT utility functions
-- Added token expiration logic
-- Implemented refresh token mechanism
-- Added unit tests for token validation
+Branch Purpose:
+Implement JWT-based authentication
+
+Previous Progress Summary:
+(none)
+
+This Commit's Contribution:
+Implemented JWT token generation with refresh mechanism
 ```
 
 #### metadata.yaml
 ```yaml
-status: completed
+status: in_progress
 test_coverage: 95%
-last_updated: 2026-02-11T10:30:00Z
+last_updated: 2026-02-12T10:30:00Z
+
+config:
+  auth_method: jwt
+  token_expiry: 3600
 ```
 
 ---
@@ -493,50 +458,56 @@ Model Context Protocol (MCP) enables seamless communication between AI agents (l
 ### Setup MCP Proxy
 
 ```bash
-# Install the MCP proxy
+# Install MCP proxy
 pip install -e .
 
-# Set the server URL
+# Set server URL
 export GCC_SERVER_URL=http://localhost:8000
 
-# Start the MCP proxy
+# Start MCP proxy
 gcc-mcp
 ```
+
+### MCP Tools
+
+GCC provides 10 tools for AI agents. **No path management required** - all paths are auto-managed via `session_id`:
+
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `gcc_init` | Initialize session | `goal`, `todo`, `session_id` |
+| `gcc_branch` | Create branch | `branch`, `purpose`, `session_id` |
+| `gcc_commit` | Save checkpoint | `branch`, `contribution`, `log_entries`, `session_id` |
+| `gcc_merge` | Merge branches | `source_branch`, `target_branch`, `summary`, `session_id` |
+| `gcc_context` | Get context | `branch`, `commit_id`, `log_tail`, `session_id` |
+| `gcc_log` | Add logs | `branch`, `entries`, `session_id` |
+| `gcc_history` | Get history | `limit`, `session_id` |
+| `gcc_diff` | View changes | `from_ref`, `to_ref`, `session_id` |
+| `gcc_show` | Show file | `ref`, `path`, `session_id` |
+| `gcc_reset` | Reset repo | `ref`, `mode`, `confirm`, `session_id` |
 
 ### Integration Flow
 
 ```
 ┌──────────────┐
-│    Claude    │
-│  (AI Agent)  │
-└──────┬───────┘
-       │ MCP Protocol (stdio)
-       │
-┌──────▼───────┐
-│  gcc-mcp     │  ← MCP Proxy (converts stdio ↔ HTTP)
-│   Proxy      │
-└──────┬───────┘
-       │ HTTP API
-       │
-┌──────▼───────┐
-│  GCC Server  │  ← FastAPI Server (port 8000)
-│   (Docker)   │
+│    Claude    │  (AI Agent)
 └──────┬───────┘
        │
-┌──────▼───────┐
-│  Persistent  │
-│    Storage   │
-└──────────────┘
-```
-
-### Add to Claude Desktop
-
-```bash
-# Install CLI
-npm install -g @anthropic-ai/claude-cli
-
-# Add MCP server
-claude mcp add --scope user --transport stdio gcc -- gcc-mcp
+       ▼
+┌──────────────────────────────┐
+│   MCP Protocol (stdio)    │
+└──────────┬─────────────────┘
+           │
+           ▼
+    ┌─────────────────────┐
+    │  gcc-mcp (Proxy) │
+    └──────────┬─────────┘
+               │
+               ▼
+         ┌────────────────┐
+         │ HTTP API (8000) │
+         │  GCC Server      │
+         │  (FastAPI)       │
+         └─────────────────┘
 ```
 
 ---
@@ -545,33 +516,29 @@ claude mcp add --scope user --transport stdio gcc -- gcc-mcp
 
 ### Environment Variables
 
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| `GCC_DATA_ROOT` | Base path for data storage | `/data` | `/var/gcc-data` |
-| `GCC_SESSION_ID` | Custom session ID | Auto-detected | `my-project` |
-| `GCC_SERVER_URL` | HTTP server URL | `http://localhost:8000` | `http://gcc:8000` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GCC_DATA_ROOT` | Base path for data storage | `/data` |
+| `GCC_SESSION_ID` | Session identifier | Auto-detected |
+| `GCC_SERVER_URL` | HTTP API server URL | `http://localhost:8000` |
+| `GCC_LOG_DIR` | Log directory | `./logs` |
+| `GCC_ENABLE_AUDIT_LOG` | Enable audit logging | `true` |
 
 ### Session ID Resolution
 
-GCC automatically determines the session ID using this priority:
+GCC automatically determines session ID using this priority:
 
-```
-1. GCC_SESSION_ID environment variable     (highest priority)
-         ↓
-2. Container hostname (Docker)             (auto-detected)
-         ↓
-3. "default"                               (fallback)
-```
+1. **GCC_SESSION_ID** environment variable (highest priority)
+2. **Container hostname** (Docker mode)
+3. **"default"** (fallback)
 
 ### Custom Session Example
 
 ```bash
 docker run -d \
-  --name gcc \
   -p 8000:8000 \
   -v gcc_data:/data \
   -e GCC_SESSION_ID=production-session \
-  -e GCC_DATA_ROOT=/data \
   gcc-mcp:latest
 ```
 
@@ -579,32 +546,115 @@ Data will be stored at: `/data/production-session/.GCC/`
 
 ---
 
-## 🔧 Troubleshooting
+## 🛠️ Development
 
-### Common Issues
+### Project Structure
 
-#### ⚠️ Encoding Errors with Non-English Text
-
-**Problem:** Chinese or non-ASCII characters cause errors.
-
-**Solution:** Use English only for all text values.
-
-```bash
-# ❌ Bad
-"goal": "实现用户认证"
-
-# ✅ Good
-"goal": "Implement user authentication"
+```
+gcc-mem-system/
+├── src/
+│   └── gcc/
+│       ├── core/              # Core functionality
+│       │   ├── storage.py     # File operations
+│       │   ├── git_ops.py     # Git operations
+│       │   ├── commands.py    # High-level commands
+│       │   ├── validators.py  # Input validation
+│       │   ├── exceptions.py   # Custom exceptions
+│       │   └── lock.py        # File locking
+│       ├── server/            # HTTP API
+│       │   ├── app.py         # FastAPI app
+│       │   ├── endpoints.py    # API routes
+│       │   └── middleware.py  # Request handling
+│       ├── mcp/              # MCP proxy
+│       │   └── proxy.py      # MCP→HTTP translation
+│       └── logging/          # Logging utilities
+│           ├── logger.py      # Structured logging
+│           └── audit.py        # Audit logging
+├── tests/                    # Test suite
+│   ├── test_api.py         # API tests
+│   ├── security/            # Security tests
+│   └── test_logging/        # Logging tests
+├── Dockerfile                 # Container image
+├── docker-compose.yml          # Multi-service setup
+├── pyproject.toml            # Package config
+└── Makefile                   # Build automation
 ```
 
-**Why?** The MCP protocol layer has limitations with non-ASCII characters on Windows.
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run specific test category
+python -m pytest tests/security -v
+python -m pytest tests/test_logging -v
+
+# Run tests in Docker
+make test-docker
+```
+
+---
+
+## 🐳 Docker Deployment
+
+### Docker Compose Services
+
+```yaml
+services:
+  gcc-mcp:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - gcc_data:/data
+    environment:
+      - GCC_DATA_ROOT=/data
+      # Optional: Set a custom session ID
+      # - GCC_SESSION_ID=my-custom-session
+
+  gcc-test:
+    build: .
+    command: ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    environment:
+      - GCC_LOG_DIR=/var/log/gcc
+      - GCC_ENABLE_AUDIT_LOG=true
+```
+
+### Quick Commands
+
+```bash
+# Build and start
+make build
+make up
+
+# View logs
+make logs
+
+# Run tests
+make test-docker
+
+# Stop services
+make down
+
+# Access container shell
+make shell
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
 
 #### 🔒 Lock Timeout Errors
 
 **Problem:** Operations timeout waiting for locks.
 
-**Solution:** Check if another process is holding the lock.
-
+**Solution:** Check if another process is holding the lock:
 ```bash
 # Check lock files
 ls /data/<session_id>/.GCC/.lock.*
@@ -613,36 +663,30 @@ ls /data/<session_id>/.GCC/.lock.*
 rm /data/<session_id>/.GCC/.lock.*
 ```
 
+#### ⚠️ Encoding Errors with Non-English Text
+
+**Problem:** Chinese or non-ASCII characters cause errors.
+
+**Solution:** Use English only for all text values:
+```bash
+# ❌ Don't
+curl -X POST http://localhost:8000/commit -d '{
+  "contribution": "实现用户认证"
+}'
+
+# ✅ Do
+curl -X POST http://localhost:8000/commit -d '{
+  "contribution": "Implemented user authentication"
+}'
+```
+
 #### 🐳 Docker Container Not Starting
 
 **Problem:** Container exits immediately.
 
-**Solution:** Check logs for errors.
-
+**Solution:** Check logs for errors:
 ```bash
 docker logs gcc
-
-# Common fixes:
-# 1. Ensure port 8000 is available
-# 2. Check volume permissions
-# 3. Verify git is installed in container
-```
-
-#### 📡 Cannot Connect to MCP Proxy
-
-**Problem:** MCP proxy cannot reach GCC server.
-
-**Solution:** Verify server URL and network connectivity.
-
-```bash
-# Test server connectivity
-curl http://localhost:8000/docs
-
-# Set correct URL
-export GCC_SERVER_URL=http://localhost:8000
-
-# Restart proxy
-gcc-mcp
 ```
 
 ### Getting Help
@@ -655,7 +699,7 @@ gcc-mcp
 
 ## 📜 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
 
 ---
 
@@ -663,6 +707,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **Made with ❤️ for AI Agents**
 
-[⬆ Back to Top](#-gcc-context-controller)
+[⬆ Back to Top](#-overview)
 
 </div>

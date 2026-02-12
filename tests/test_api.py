@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from gcc_mcp.server import app
+from gcc.server.app import app
 
 
 client = TestClient(app)

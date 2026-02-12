@@ -11,5 +11,16 @@ services:
       # If not set, will use container hostname (container ID)
       # - GCC_SESSION_ID=my-custom-session
 
+  # Test service
+  gcc-test:
+    build: .
+    command: ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    environment:
+      - GCC_LOG_DIR=/var/log/gcc
+      - GCC_ENABLE_AUDIT_LOG=true
+
 volumes:
   gcc_data:
