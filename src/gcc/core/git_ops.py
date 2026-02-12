@@ -11,7 +11,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Iterable, List, Optional
 
-from .exceptions import RepositoryError
+from .exceptions import RepositoryError, ValidationError
+from .validators import Validators
 
 
 def _get_git_config():
@@ -240,11 +241,11 @@ def checkout_branch(repo_root: Path, branch: str) -> None:
 
     Raises:
         RepositoryError: If checkout fails
+        ValidationError: If branch name is invalid
     """
-    # Basic validation (full validation done in validators module)
-    if not branch:
-        raise RepositoryError("Branch name cannot be empty")
-    _run_git(["checkout", "-B", branch], repo_root)
+    # Validate branch name
+    validated_branch = Validators.validate_branch_name(branch)
+    _run_git(["checkout", "-B", validated_branch], repo_root)
 
 
 def add_and_commit(repo_root: Path, paths: Iterable[Path], message: str) -> None:
@@ -310,12 +311,12 @@ def git_log(repo_root: Path, limit: int = 20) -> List[dict]:
 
     Raises:
         RepositoryError: If log command fails
+        ValidationError: If limit is invalid
     """
+    validated_limit = Validators.validate_limit(limit)
     try:
-        # Validate limit bounds
-        limit = max(1, min(limit, 10000))
         result = _run_git(
-            ["log", f"-n{limit}", "--pretty=format:%H|%ct|%s"],
+            ["log", f"-n{validated_limit}", "--pretty=format:%H|%ct|%s"],
             repo_root,
         )
         entries = []
@@ -355,11 +356,14 @@ def git_diff(repo_root: Path, from_ref: str, to_ref: Optional[str]) -> str:
 
     Raises:
         RepositoryError: If diff command fails
+        ValidationError: If refs are invalid
     """
+    validated_from = Validators.validate_git_ref(from_ref)
     if to_ref:
-        args = ["diff", f"{from_ref}..{to_ref}"]
+        validated_to = Validators.validate_git_ref(to_ref) if to_ref else None
+        args = ["diff", f"{validated_from}..{validated_to}"]
     else:
-        args = ["diff", from_ref]
+        args = ["diff", validated_from]
     return _run_git(args, repo_root).stdout
 
 
@@ -376,10 +380,12 @@ def git_show(repo_root: Path, ref: str, path: Optional[str]) -> str:
 
     Raises:
         RepositoryError: If show command fails
+        ValidationError: If ref is invalid
     """
+    validated_ref = Validators.validate_git_ref(ref)
     if path:
-        return _run_git(["show", f"{ref}:{path}"], repo_root).stdout
-    return _run_git(["show", ref], repo_root).stdout
+        return _run_git(["show", f"{validated_ref}:{path}"], repo_root).stdout
+    return _run_git(["show", validated_ref], repo_root).stdout
 
 
 def git_reset(repo_root: Path, ref: str, mode: str) -> None:
@@ -392,8 +398,8 @@ def git_reset(repo_root: Path, ref: str, mode: str) -> None:
 
     Raises:
         RepositoryError: If reset command fails
-        ValueError: If mode is invalid
+        ValidationError: If mode or ref is invalid
     """
-    if mode not in {"soft", "hard"}:
-        raise ValueError(f"reset mode must be 'soft' or 'hard', got: {mode}")
-    _run_git(["reset", f"--{mode}", ref], repo_root)
+    validated_mode = Validators.validate_reset_mode(mode)
+    validated_ref = Validators.validate_git_ref(ref)
+    _run_git(["reset", f"--{validated_mode}", validated_ref], repo_root)

@@ -19,89 +19,89 @@ from ..core.storage import normalize_session_id
 
 class InitRequest(BaseModel):
     """Request model for session initialization."""
-    root: str = Field(..., description="Project root path")
-    goal: Optional[str] = Field(None, description="Session goal")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    goal: Optional[str] = Field(None, description="Session goal", max_length=10000)
     todo: Optional[List[str]] = Field(None, description="Todo items")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class BranchRequest(BaseModel):
     """Request model for branch creation."""
-    root: str = Field(..., description="Project root path")
-    branch: str = Field(..., description="Branch name")
-    purpose: str = Field(..., description="Branch purpose")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    branch: str = Field(..., description="Branch name", max_length=100)
+    purpose: str = Field(..., description="Branch purpose", max_length=10000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class LogRequest(BaseModel):
     """Request model for log appending."""
-    root: str = Field(..., description="Project root path")
-    branch: str = Field(..., description="Branch name")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    branch: str = Field(..., description="Branch name", max_length=100)
     entries: List[str] = Field(..., description="Log entries to append")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class CommitRequest(BaseModel):
     """Request model for commit creation."""
-    root: str = Field(..., description="Project root path")
-    branch: str = Field(..., description="Branch name")
-    contribution: str = Field(..., description="Commit contribution")
-    purpose: Optional[str] = Field(None, description="Branch purpose")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    branch: str = Field(..., description="Branch name", max_length=100)
+    contribution: str = Field(..., description="Commit contribution", min_length=1, max_length=10000)
+    purpose: Optional[str] = Field(None, description="Branch purpose", max_length=10000)
     log_entries: Optional[List[str]] = Field(None, description="Log entries")
     metadata_updates: Optional[Dict[str, Any]] = Field(None, description="Metadata updates")
-    update_main: Optional[str] = Field(None, description="Text to append to main.md")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    update_main: Optional[str] = Field(None, description="Text to append to main.md", max_length=10000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class MergeRequest(BaseModel):
     """Request model for branch merging."""
-    root: str = Field(..., description="Project root path")
-    source_branch: str = Field(..., description="Source branch name")
-    target_branch: Optional[str] = Field(None, description="Target branch name")
-    summary: Optional[str] = Field(None, description="Merge summary")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    source_branch: str = Field(..., description="Source branch name", max_length=100)
+    target_branch: Optional[str] = Field(None, description="Target branch name", max_length=100)
+    summary: Optional[str] = Field(None, description="Merge summary", max_length=10000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class ContextRequest(BaseModel):
     """Request model for context retrieval."""
-    root: str = Field(..., description="Project root path")
-    branch: Optional[str] = Field(None, description="Branch name")
-    commit_id: Optional[str] = Field(None, description="Commit ID")
-    log_tail: Optional[int] = Field(None, description="Number of log lines")
-    metadata_segment: Optional[str] = Field(None, description="Metadata key")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    branch: Optional[str] = Field(None, description="Branch name", max_length=100)
+    commit_id: Optional[str] = Field(None, description="Commit ID", max_length=100)
+    log_tail: Optional[int] = Field(None, description="Number of log lines", ge=1, le=10000)
+    metadata_segment: Optional[str] = Field(None, description="Metadata key", max_length=100)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class HistoryRequest(BaseModel):
     """Request model for history retrieval."""
-    root: str = Field(..., description="Project root path")
-    limit: int = Field(20, description="Maximum commits to return")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    limit: int = Field(20, description="Maximum commits to return", ge=1, le=1000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class DiffRequest(BaseModel):
     """Request model for diff retrieval."""
-    root: str = Field(..., description="Project root path")
-    from_ref: str = Field(..., description="Source ref")
-    to_ref: Optional[str] = Field(None, description="Target ref")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    from_ref: str = Field(..., description="Source ref", max_length=1000)
+    to_ref: Optional[str] = Field(None, description="Target ref", max_length=1000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class ShowRequest(BaseModel):
     """Request model for file content retrieval."""
-    root: str = Field(..., description="Project root path")
-    ref: str = Field(..., description="Git ref")
-    path: Optional[str] = Field(None, description="File path")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    ref: str = Field(..., description="Git ref", max_length=1000)
+    path: Optional[str] = Field(None, description="File path", max_length=1000)
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class ResetRequest(BaseModel):
     """Request model for repository reset."""
-    root: str = Field(..., description="Project root path")
-    ref: str = Field(..., description="Git ref to reset to")
+    root: str = Field(..., description="Project root path", max_length=1000)
+    ref: str = Field(..., description="Git ref to reset to", max_length=1000)
     mode: str = Field("soft", description="Reset mode (soft/hard)")
     confirm: bool = Field(False, description="Confirm hard reset")
-    session_id: Optional[str] = Field(None, description="Session identifier")
+    session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 # Path resolution helper
@@ -116,16 +116,28 @@ def _resolve_path(root: str, session_id: Optional[str] = None) -> Path:
     Returns:
         Resolved Path object
 
+    Raises:
+        HTTPException: If path is invalid or outside allowed boundaries
+
     Note:
         When GCC_DATA_ROOT env var is set, path is resolved under that directory
         with session_id subdirectory for container isolation.
     """
+    from ..core.validators import Validators
+
     base = os.environ.get("GCC_DATA_ROOT")
     if base:
         # Container mode: use session_id for isolation
         normalized_session = normalize_session_id(session_id)
-        return (Path(base) / normalized_session).resolve()
-    return Path(root).expanduser().resolve()
+        base_path = Path(base).resolve()
+        session_path = (base_path / normalized_session).resolve()
+        # Verify path is within base
+        Validators.validate_path_safe(str(session_path), base_path)
+        return session_path
+
+    # Direct mode: resolve and validate path
+    resolved = Path(root).expanduser().resolve()
+    return Validators.validate_path_safe(str(resolved))
 
 
 # API Router
