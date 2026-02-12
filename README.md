@@ -2,7 +2,7 @@
 
 **AI Memory Management • Git-Backed Context • MCP Integration • Docker Ready**
 
-This project is inspired by ***the Git-Context-Controller (GCC) framework proposed in Git-Context-Controller: Manage the Context of LLM-based Agents like Git***.
+This project is inspired by ***Git Context Controller: Manage the Context of LLM-based Agents like Git***.
 
 [English](#english) | [中文](#chinese)
 
