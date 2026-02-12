@@ -1,17 +1,24 @@
+"""MCP (Model Context Protocol) proxy for GCC system.
+
+Translates MCP JSON-RPC requests to HTTP API calls.
+"""
 from __future__ import annotations
 
 import json
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import httpx
 
-# Fix encoding for Windows console
+
+# Windows encoding fix - important for non-ASCII characters
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stdin.reconfigure(encoding="utf-8", errors="replace")
 
+
+# Configuration
 SERVER_URL_ENV = "GCC_SERVER_URL"
 SESSION_ID_ENV = "GCC_SESSION_ID"
 DEFAULT_SERVER_URL = "http://localhost:8000"
@@ -23,6 +30,8 @@ COMMIT_PROMPT_GUIDE = (
     "Update main milestones via update_main when needed."
 )
 
+
+# Tool definitions
 TOOLS = [
     {
         "name": "gcc_init",
@@ -40,7 +49,7 @@ TOOLS = [
     },
     {
         "name": "gcc_branch",
-        "description": "Create a memory branch within the session. Writes commit.md/log.md/metadata.yaml and creates a git branch for isolated exploration. IMPORTANT: Use English only for 'purpose' to avoid encoding issues.",
+        "description": "Create a memory branch within session. Writes commit.md/log.md/metadata.yaml and creates a git branch for isolated exploration. IMPORTANT: Use English only for 'purpose' to avoid encoding issues.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -54,8 +63,7 @@ TOOLS = [
     },
     {
         "name": "gcc_commit",
-        "description": "Record a structured memory checkpoint. Appends to commit.md, optionally adds OTA log entries and metadata updates, updates main.md, and creates a git commit. IMPORTANT: Use English only for all text fields ('contribution', 'log_entries') to avoid encoding issues. "
-        + COMMIT_PROMPT_GUIDE,
+        "description": "Record a structured memory checkpoint. Appends to commit.md, optionally adds OTA log entries and metadata updates, updates main.md, and creates a git commit. IMPORTANT: Use English only for all text fields ('contribution', 'log_entries') to avoid encoding issues. " + COMMIT_PROMPT_GUIDE,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -118,7 +126,7 @@ TOOLS = [
     },
     {
         "name": "gcc_history",
-        "description": "List git commit history for the session repository. Each entry reflects a memory change checkpoint.",
+        "description": "List git commit history for session repository. Each entry reflects a memory change checkpoint.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -159,7 +167,7 @@ TOOLS = [
     },
     {
         "name": "gcc_reset",
-        "description": "Reset the session git repo to a ref. Use mode=soft or hard; hard reset requires confirm=true.",
+        "description": "Reset session git repo to a ref. Use mode=soft or hard; hard reset requires confirm=true.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -176,23 +184,36 @@ TOOLS = [
 
 
 def _server_url() -> str:
+    """Get server URL from environment.
+
+    Returns:
+        Server URL for HTTP API calls
+    """
     return os.environ.get(SERVER_URL_ENV, DEFAULT_SERVER_URL).rstrip("/")
 
 
 def _default_session_id() -> str:
+    """Get or generate default session ID.
+
+    Priority:
+    1. GCC_SESSION_ID environment variable
+    2. Container hostname (Docker)
+    3. Process ID
+
+    Returns:
+        Session ID string
+    """
     global DEFAULT_SESSION_ID
 
-    # Priority 1: Explicit environment variable (GCC_SESSION_ID)
+    # Priority 1: Explicit environment variable
     env_value = os.environ.get(SESSION_ID_ENV)
     if env_value:
         return env_value
 
-    # Priority 2: Try to get container ID from Docker environment
-    # Docker sets hostname to container ID
+    # Priority 2: Try container ID from hostname
     try:
         hostname = os.environ.get("HOSTNAME", "")
         if hostname and len(hostname) >= 12:
-            # Container IDs are typically 64 hex chars, use first 12
             if DEFAULT_SESSION_ID is None:
                 DEFAULT_SESSION_ID = f"container-{hostname[:12]}"
             return DEFAULT_SESSION_ID
@@ -206,6 +227,14 @@ def _default_session_id() -> str:
 
 
 def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure session_id is set in arguments.
+
+    Args:
+        arguments: Tool arguments dictionary
+
+    Returns:
+        Arguments with session_id guaranteed to be set
+    """
     if "session_id" not in arguments or not arguments.get("session_id"):
         arguments = dict(arguments)
         arguments["session_id"] = _default_session_id()
@@ -213,6 +242,18 @@ def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _post(path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Make HTTP POST request to GCC server.
+
+    Args:
+        path: API endpoint path
+        payload: Request body
+
+    Returns:
+        Response JSON
+
+    Raises:
+        httpx.HTTPError: If request fails
+    """
     url = f"{_server_url()}{path}"
     with httpx.Client(timeout=30.0) as client:
         response = client.post(url, json=payload)
@@ -221,6 +262,18 @@ def _post(path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle MCP tool call by translating to HTTP request.
+
+    Args:
+        tool_name: Name of the tool being called
+        arguments: Tool arguments
+
+    Returns:
+        Result from HTTP API
+
+    Raises:
+        ValueError: If tool name is unknown
+    """
     mapping = {
         "gcc_init": "/init",
         "gcc_branch": "/branch",
@@ -240,8 +293,15 @@ def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, A
 
 
 def _write_response(payload: Dict[str, Any]) -> None:
-    # Use ensure_ascii=False to properly handle Unicode characters (e.g., Chinese)
-    # Handle encoding errors by replacing invalid characters
+    """Write JSON-RPC response to stdout.
+
+    Args:
+        payload: Response dictionary
+
+    Note:
+        Uses ensure_ascii=False for proper Unicode handling.
+        Falls back to ASCII with escapes if UTF-8 fails.
+    """
     try:
         output = json.dumps(payload, ensure_ascii=False)
     except (UnicodeEncodeError, UnicodeDecodeError):
@@ -251,7 +311,16 @@ def _write_response(payload: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-def _error_response(request_id: Optional[Any], message: str) -> Dict[str, Any]:
+def _error_response(request_id: Any, message: str) -> Dict[str, Any]:
+    """Create JSON-RPC error response.
+
+    Args:
+        request_id: Request ID from client
+        message: Error message
+
+    Returns:
+        Error response dictionary
+    """
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -260,10 +329,17 @@ def _error_response(request_id: Optional[Any], message: str) -> Dict[str, Any]:
 
 
 def main() -> None:
+    """Main MCP proxy loop.
+
+    Reads JSON-RPC requests from stdin, processes them,
+    and writes responses to stdout.
+    """
     for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
+
+        request_id = None
         try:
             request = json.loads(line)
             request_id = request.get("id")
@@ -279,7 +355,7 @@ def main() -> None:
                         "id": request_id,
                         "result": {
                             "protocolVersion": protocol,
-                            "serverInfo": {"name": "gcc-mcp", "version": "0.1.0"},
+                            "serverInfo": {"name": "gcc-mcp", "version": "1.0.0"},
                             "capabilities": {"tools": {}},
                         },
                     }
@@ -287,9 +363,9 @@ def main() -> None:
                 continue
 
             if method in ("initialized", "notifications/initialized") or (
-                isinstance(method, str) and method.startswith("notifications/")
+                    isinstance(method, str) and method.startswith("notifications/")
             ):
-                # Notifications do not expect a response.
+                # Notifications do not expect a response
                 continue
 
             if method == "tools/list":
@@ -318,7 +394,7 @@ def main() -> None:
                 tool_name = params.get("name")
                 arguments = params.get("arguments") or {}
                 result = _handle_tools_call(tool_name, arguments)
-                # Serialize result to JSON once, not twice
+                # Serialize result once
                 result_text = json.dumps(result, ensure_ascii=False, indent=None)
                 _write_response(
                     {
@@ -335,8 +411,9 @@ def main() -> None:
 
             if request_id is not None:
                 _write_response(_error_response(request_id, f"Unsupported method: {method}"))
+
         except Exception as exc:
-            if "request_id" in locals() and request_id is not None:
+            if request_id is not None:
                 _write_response(_error_response(request_id, str(exc)))
 
 

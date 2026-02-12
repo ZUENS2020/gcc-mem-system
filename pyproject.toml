@@ -1,7 +1,7 @@
 [project]
-name = "gcc-mcp"
-version = "0.1.0"
-description = "HTTP API server implementing Git-Context-Controller (GCC) memory system"
+name = "gcc"
+version = "1.0.0"
+description = "Unified Git-Context-Controller (GCC) memory system with HTTP API and MCP integration"
 requires-python = ">=3.9"
 dependencies = [
   "fastapi>=0.110.0",
@@ -18,11 +18,15 @@ dev = [
 ]
 
 [project.scripts]
-gcc-mcp = "gcc_mcp.mcp_proxy:main"
-gcc-server = "gcc_mcp.server:main"
+# Server entry points
+gcc-server = "gcc.server.app:main"
+
+# MCP proxy entry point
+gcc-mcp = "gcc.mcp.proxy:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = "src"
 
 [build-system]
 requires = ["setuptools>=68.0.0"]

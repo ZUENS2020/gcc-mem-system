@@ -16,4 +16,4 @@ RUN apt-get update \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "gcc_mcp.server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["gcc-server"]
