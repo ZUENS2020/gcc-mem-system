@@ -75,12 +75,12 @@ AI agents working on complex projects need to:
 
 | Feature | Benefit |
 |---------|---------|
-| 🎯 Goal Tracking | Keep project objectives clear and accessible |
-| 🔄 Branch System | Work on multiple features independently |
-| 📚 Version History | Full audit trail of all memory changes |
-| 🏷️ Metadata Support | Store structured data alongside context |
-| 🔒 Thread-Safe | File locking prevents data corruption |
-| 🌐 HTTP API | Easy integration with any client |
+| 🎯 **Goal Tracking** | Keep project objectives clear and accessible |
+| 🔄 **Branch System** | Work on multiple features independently |
+| 📚 **Version History** | Full audit trail of all memory changes |
+| 🏷️ **Metadata Support** | Store structured data alongside context |
+| 🔒 **Thread-Safe** | File locking prevents data corruption |
+| 🌐 **HTTP API** | Easy integration with any client |
 
 ---
 
@@ -192,7 +192,7 @@ docker compose up -d
 **Verify:**
 ```bash
 curl http://localhost:8000/health
-# Expected: {"status":"healthy"}
+# Expected: {"status": "healthy"}
 ```
 
 ✅ **API Server:** http://localhost:8000  
