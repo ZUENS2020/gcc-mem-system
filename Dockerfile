@@ -14,6 +14,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir .
 
+# Install pytest for testing
+RUN pip install --no-cache-dir pytest
+
 EXPOSE 8000
 
 CMD ["gcc-server"]
