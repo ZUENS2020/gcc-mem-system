@@ -784,6 +784,135 @@ python -m gcc.tools.verify_data
 
 ---
 
+## 十、实施进度跟踪
+
+### 已完成阶段 ✅
+
+#### 阶段1: 代码合并重构（P3）
+- [x] 创建新目录结构 `src/gcc/`
+- [x] 创建配置系统 `src/gcc/server/config.py`
+- [x] 创建异常层次结构 `src/gcc/core/exceptions.py`
+- [x] 迁移核心模块（storage, lock, git_ops, commands）
+- [x] 创建服务器模块（app, endpoints, middleware）
+- [x] 迁移MCP代理模块
+- [x] 更新测试和配置文件
+- [x] 删除旧代码目录（gcc_mcp, gcc_skill）
+- **提交**: `108e8aa` - "Refactor: Unify gcc_mcp and gcc_skill into single gcc package"
+
+#### 阶段2: 输入验证与安全加固（P0）
+- [x] 创建统一验证模块 `src/gcc/core/validators.py`
+  - 分支名验证（字母数字、长度、保留字检查）
+  - session_id验证
+  - git ref验证（防命令注入）
+  - limit参数验证
+  - 路径安全验证（防遍历）
+  - purpose/contribution验证
+  - reset mode验证
+- [x] 更新git_ops.py使用验证器
+- [x] 更新endpoints.py添加Pydantic约束
+- [x] 添加路径遍历保护
+- [x] 创建安全测试（15个测试，全部通过）
+- **提交**: `b090f79` - "Security: Add input validation and path traversal protection (P0)"
+
+#### 阶段3: 错误处理与日志管理改进（P1）
+- [x] 创建日志轮转模块 `src/gcc/logging/logger.py`
+  - RotatingFileHandler: 10MB x 5备份
+  - 多日志级别支持（DEBUG, INFO, WARNING, ERROR）
+  - 控制台和文件双输出
+- [x] 创建审计日志模块 `src/gcc/logging/audit.py`
+  - 记录所有API操作
+  - JSON行格式便于解析
+  - 自动敏感数据清理（密码、token、key）
+  - 支持通过环境变量禁用
+- [x] 更新middleware集成审计日志
+  - 异常处理中间件记录所有错误
+  - 请求跟踪中间件记录所有请求
+- [x] 在app.py中初始化日志系统
+- [x] 创建日志测试（8个测试，全部通过）
+- [x] 添加Docker测试支持
+  - docker-compose.yml添加test服务
+  - 创建Makefile便于测试
+- **提交**: `bec5923` - "Logging: Add log rotation and audit logging (P1)"
+
+### 待实施阶段 📋
+
+#### 阶段4: 性能优化（P2）
+- [ ] 缓存层实现
+- [ ] Git操作结果缓存
+- [ ] 限流中间件（已部分实现）
+- [ ] 连接池管理
+
+#### 阶段5: 文档完善（P3）
+- [ ] API文档完善（添加description, tags）
+- [ ] README更新（记录新的环境变量）
+- [ ] 改进计划更新（标记已完成的P0/P1问题）
+
+### 测试状态 🧪
+
+```
+总测试数: 26
+- 安全测试: 15 ✅
+- 日志测试: 8 ✅
+- API功能测试: 3 ✅
+```
+
+### 代码质量指标 📊
+
+**代码重复**: 90% → 0% ✅
+**异常处理**: 基础 → 统一体系 ✅
+**输入验证**: 无 → 完整验证 ✅
+**日志管理**: 基础 → 轮转+审计 ✅
+**测试覆盖**: 3 → 26 测试 ✅
+
+### 环境变量配置 ⚙️
+
+```bash
+# 日志配置
+GCC_LOG_DIR=/var/log/gcc          # 日志目录
+GCC_LOG_LEVEL=info               # 日志级别
+GCC_ENABLE_AUDIT_LOG=true        # 启用审计日志
+GCC_LOG_MAX_BYTES=10485760       # 10MB
+GCC_LOG_BACKUP_COUNT=5            # 备份文件数
+
+# 安全配置
+GCC_MAX_BRANCH_LENGTH=100         # 分支名最大长度
+GCC_MAX_SESSION_LENGTH=100        # session_id最大长度
+GCC_MAX_LIMIT=1000                # limit参数最大值
+GCC_ALLOW_PATH_TRAVERSAL=false   # 允许路径遍历（测试时设为true）
+GCC_ENABLE_RATE_LIMIT=true        # 启用限流
+GCC_RATE_LIMIT_REQUESTS=60       # 每分钟请求数
+
+# 服务器配置
+GCC_HOST=0.0.0.0                 # 服务器地址
+GCC_PORT=8000                     # 服务器端口
+GCC_WORKERS=1                     # 工作进程数
+GCC_RELOAD=false                   # 自动重载
+```
+
+### Docker测试 🐳
+
+```bash
+# 构建镜像
+make build
+
+# 启动服务器
+make up
+
+# 运行测试（本地）
+make test
+
+# 运行测试（Docker）
+make test-docker
+
+# 查看日志
+make logs
+
+# 进入容器shell
+make shell
+```
+
+---
+
 ## 十、总结
 
 本改进计划分为3个优先级：
