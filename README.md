@@ -1429,6 +1429,580 @@ This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file
 
 **Made with ❤️ for AI Agents**
 
-[⬆ Back to Top](#-overview)
+[⬆ Back to Top](#english-documentation)
+
+</div>
+
+---
+---
+
+# 中文文档
+
+## 📋 目录
+
+- [🌟 项目概览](#-项目概览)
+- [✨ 核心特性](#-核心特性)
+- [🏗️ 系统架构](#️-系统架构)
+- [🚀 快速开始](#-快速开始)
+- [💡 使用示例](#-使用示例)
+- [📚 API 参考](#-api-参考)
+- [🔌 MCP 集成](#-mcp-集成)
+- [⚙️ 配置说明](#️-配置说明)
+- [🛠️ 开发指南](#️-开发指南)
+- [🔍 故障排除](#-故障排除)
+- [🤝 贡献指南](#-贡献指南)
+- [📝 开源许可](#-开源许可)
+
+---
+
+## 🌟 项目概览
+
+**GCC Context Controller** 是一个专为 AI 智能体设计的**高级内存管理系统**。它提供类似 git 的版本控制系统，用于管理 AI 智能体的内存、上下文和多任务并发工作历史。
+
+### 解决什么问题？
+
+现代 AI 智能体在处理复杂、长期项目时面临关键挑战：
+
+1. **记忆丢失** - 会话之间上下文丢失
+2. **任务隔离** - 需要独立处理多个功能
+3. **进度追踪** - 难以维护详细的操作日志
+4. **上下文检索** - 难以高效检索相关信息
+5. **版本控制** - 无法跟踪变更和回滚错误
+
+### GCC 解决方案
+
+GCC 提供一个**基于 git 的内存系统**，使 AI 智能体能够：
+
+- 🗂️ **结构化内存** - 使用分支、提交和日志组织上下文（类似 git 管理代码）
+- 🔄 **版本控制** - 所有内存操作都有完整的 git 历史记录
+- 🔌 **MCP 集成** - 通过模型上下文协议原生支持 Claude Desktop 等 AI 平台
+- 🐳 **生产就绪** - 使用 Docker Compose 轻松部署，线程安全操作
+- 🔒 **多租户** - 会话隔离允许多个独立项目
+- 📊 **丰富上下文** - 在提交旁存储元数据、日志和结构化数据
+
+### 为什么选择 GCC？
+
+| 传统方式 | 使用 GCC |
+|---------|----------|
+| ❌ 上下文仅在聊天历史中 | ✅ 持久化、结构化的内存存储 |
+| ❌ 内存无版本控制 | ✅ 完整 git 历史，支持对比和回滚 |
+| ❌ 单一线性对话 | ✅ 多个并行分支处理任务 |
+| ❌ 手动管理上下文 | ✅ 自动检索和组织上下文 |
+| ❌ 重启后丢失工作 | ✅ 完整状态保存，重启后恢复 |
+
+**GCC 将 AI 智能体从无状态工具转变为持久化、有组织的协作者！**
+
+---
+
+## ✨ 核心特性
+
+### 核心内存操作
+
+```
+             GCC 上下文控制器架构
+  
+   📝 init     →  初始化项目目标和待办事项
+   🌿 branch   →  创建隔离的内存上下文
+   💾 commit   →  保存结构化进度检查点
+   📖 context  →  高效检索组织化内存
+   🔀 merge    →  合并不同分支的工作
+   📊 log      →  追加详细操作记录
+   📜 history  →  查看完整提交时间线
+   🔍 diff     →  比较内存状态
+   ⏪ reset    →  恢复到以前的状态
+   👁️ show     →  检查特定版本
+```
+
+### 技术能力
+
+| 类别 | 功能特性 |
+|------|----------|
+| **💾 存储** | • 基于 Git 的文件系统<br>• YAML 元数据支持<br>• Markdown 文档<br>• 二进制安全操作 |
+| **🔒 并发** | • 基于文件的锁定<br>• 线程安全操作<br>• 原子提交<br>• 死锁预防 |
+| **🌐 API** | • RESTful HTTP API (FastAPI)<br>• MCP JSON-RPC 协议<br>• 交互式文档 (Swagger/ReDoc)<br>• 健康检查 |
+| **🎯 组织** | • 多会话隔离<br>• 基于分支的工作流<br>• 层次化结构<br>• 自动生成 ID |
+| **📊 追踪** | • 提交历史<br>• 操作日志<br>• 元数据标记<br>• 时间戳追踪 |
+| **🔄 Git 功能** | • 完整版本控制<br>• 分支管理<br>• 合并操作<br>• 差异可视化<br>• 重置能力 |
+
+### 主要优势
+
+1. **🎯 持久化内存** - 你的 AI 智能体永不忘记。所有上下文、目标和进度跨会话持久化。
+
+2. **🔄 真正的版本控制** - 每次更改都被跟踪。查看历史、比较版本、回滚错误。
+
+3. **🌿 并行工作流** - 使用隔离的分支同时处理多个功能，就像软件开发一样。
+
+4. **📚 结构化存储** - 不再是无结构的聊天日志。一切都井然有序：目标、待办事项、提交、日志和元数据。
+
+5. **🔌 无缝集成** - 通过 MCP 与 Claude Desktop 配合使用，或通过 HTTP API 与任何应用程序集成。
+
+6. **🐳 生产就绪** - 包含 Docker 部署、健康检查、适当的日志记录和错误处理。
+
+---
+
+## 🏗️ 系统架构
+
+### 系统架构图
+
+```
+┌─────────────────────────────────────────────────────┐
+│          AI 智能体 / 客户端应用程序                   │
+│   (Claude Desktop, 自定义应用, Python 脚本)          │
+└────────────────────┬────────────────────────────────┘
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+   MCP 协议              HTTP REST API
+   (JSON-RPC)          (OpenAPI/Swagger)
+        │                         │
+        └────────────┬────────────┘
+                     ▼
+┌─────────────────────────────────────────────────────┐
+│           GCC 上下文控制器服务器                      │
+├─────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐ │
+│  │  MCP 代理    │  │  FastAPI     │  │  命令层   │ │
+│  │  (stdio)     │  │  服务器      │  │           │ │
+│  └──────┬───────┘  └──────┬───────┘  └─────┬─────┘ │
+├─────────┴──────────────────┴────────────────┴───────┤
+│              核心业务逻辑层                          │
+│  ┌────────┐  ┌──────────┐  ┌────────┐  ┌────────┐ │
+│  │存储层  │  │ Git 操作 │  │  锁定  │  │  验证  │ │
+│  └────────┘  └──────────┘  └────────┘  └────────┘ │
+└─────────────────────┬───────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│       文件系统 (基于 Git 的存储)                     │
+│                                                     │
+│  /data/<session_id>/.GCC/                          │
+│    ├── sessions/<session_id>/                      │
+│    │     ├── main.md          (目标和待办事项)     │
+│    │     └── branches/                             │
+│    │           ├── main/                           │
+│    │           ├── feature-a/                      │
+│    │           └── feature-b/                      │
+│    └── .git/                 (版本控制)            │
+└─────────────────────────────────────────────────────┘
+```
+
+### 数据结构深度解析
+
+```
+/data/<session_id>/                     # 会话工作区
+└── .GCC/                               # GCC 系统目录
+    ├── sessions/<session_id>/          # 会话特定数据
+    │   ├── main.md                     # 项目目标和待办事项列表
+    │   │                               # 示例内容：
+    │   │                               # # Goal
+    │   │                               # 构建 REST API
+    │   │                               # ## Todo
+    │   │                               # - [x] 设置数据库
+    │   │                               # - [ ] 创建端点
+    │   │
+    │   └── branches/<branch>/          # 功能分支
+    │       ├── commit.md               # 提交历史
+    │       │                           # 格式：多个提交
+    │       │                           # 由 "=== Commit ===" 分隔
+    │       │
+    │       ├── log.md                  # 详细操作日志
+    │       │                           # 所有操作的时间顺序记录
+    │       │
+    │       └── metadata.yaml           # 结构化元数据
+    │                                   # 示例：
+    │                                   # status: in_progress
+    │                                   # test_coverage: 95%
+    │                                   # dependencies: [PyJWT]
+    │
+    └── .git/                           # Git 仓库
+        ├── objects/                    # Git 对象存储
+        ├── refs/                       # 分支引用
+        └── logs/                       # Git 操作日志
+```
+
+---
+
+## 🚀 快速开始
+
+### 先决条件
+
+选择你的安装方式：
+
+- **推荐**：Docker & Docker Compose（最简单、最可靠）
+- **备选**：Python 3.9+（用于开发或直接安装）
+- **系统**：必须安装 Git（版本控制所需）
+
+### 方式一：Docker 部署 🐳（推荐）
+
+适合生产使用、测试，或者如果你想在 30 秒内开始使用。
+
+**快速启动：**
+
+```bash
+# 克隆仓库
+git clone https://github.com/ZUENS2020/gcc-mem-system.git
+cd gcc-mem-system
+
+# 启动服务器（如需要会构建镜像）
+docker compose up -d
+
+# 查看日志
+docker compose logs -f gcc-mcp
+```
+
+**验证是否工作：**
+
+```bash
+# 健康检查
+curl http://localhost:8000/health
+# 预期输出: {"status": "healthy"}
+
+# 查看 API 文档
+open http://localhost:8000/docs
+```
+
+✅ **API 服务器：** http://localhost:8000  
+📚 **交互式文档：** http://localhost:8000/docs  
+📖 **ReDoc：** http://localhost:8000/redoc
+
+**停止服务器：**
+
+```bash
+docker compose down
+```
+
+### 方式二：本地 Python 安装 💻
+
+适合开发、测试或集成到现有 Python 项目中。
+
+**安装：**
+
+```bash
+# 克隆仓库
+git clone https://github.com/ZUENS2020/gcc-mem-system.git
+cd gcc-mem-system
+
+# 以开发模式安装
+pip install -e .
+```
+
+**运行服务器：**
+
+```bash
+# 启动 FastAPI 服务器
+gcc-server
+
+# 服务器在 http://localhost:8000 启动
+```
+
+**运行 MCP 代理（用于 Claude Desktop）：**
+
+```bash
+# 设置服务器 URL（如果与默认不同）
+export GCC_SERVER_URL=http://localhost:8000
+
+# 启动 MCP 代理
+gcc-mcp
+```
+
+### 快速测试
+
+服务器运行后，尝试这个简单的工作流：
+
+```bash
+# 1. 初始化会话
+curl -X POST http://localhost:8000/init \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal": "测试 GCC 系统",
+    "todo": ["创建分支", "进行提交"],
+    "session_id": "test-session"
+  }'
+
+# 2. 创建分支
+curl -X POST http://localhost:8000/branch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "test-branch",
+    "purpose": "测试 GCC 功能",
+    "session_id": "test-session"
+  }'
+
+# 3. 进行提交
+curl -X POST http://localhost:8000/commit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "test-branch",
+    "contribution": "第一次测试提交",
+    "log_entries": ["初始化测试", "创建分支"],
+    "session_id": "test-session"
+  }'
+
+# 4. 获取上下文
+curl -X POST http://localhost:8000/context \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "test-branch",
+    "session_id": "test-session"
+  }'
+```
+
+---
+
+## 💡 使用示例
+
+### 实际场景：构建 Web 应用程序
+
+这个综合示例展示了 AI 智能体如何在构建 REST API 应用程序时使用 GCC 管理内存。
+
+#### 场景概述
+
+你正在构建一个带有身份验证、数据库和 API 端点的 REST API。GCC 帮助你：
+- 跟踪整体项目目标和待办事项
+- 在隔离的分支中处理功能
+- 记录所有操作的详细日志
+- 存储有关实现细节的元数据
+- 合并已完成的功能
+
+**完整项目工作流示例：**
+
+```bash
+# 步骤 1: 初始化项目
+curl -X POST http://localhost:8000/init \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal": "构建带身份验证和数据库的 REST API 服务器",
+    "todo": [
+      "设计数据库架构",
+      "实现 CRUD 端点",
+      "添加 JWT 身份验证",
+      "编写 API 文档",
+      "添加速率限制"
+    ],
+    "session_id": "rest-api-project"
+  }'
+
+# 步骤 2: 为身份验证创建功能分支
+curl -X POST http://localhost:8000/branch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "user-authentication",
+    "purpose": "实现基于 JWT 的身份验证系统，包括登录、登出和令牌刷新",
+    "session_id": "rest-api-project"
+  }'
+
+# 步骤 3: 取得进展 - 第一次提交
+curl -X POST http://localhost:8000/commit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "branch": "user-authentication",
+    "contribution": "实现了 JWT 令牌生成和验证工具",
+    "log_entries": [
+      "创建了带有令牌生成函数的 jwt_utils.py",
+      "添加了令牌过期逻辑（默认 1 小时）",
+      "实现了刷新令牌机制",
+      "为令牌验证添加了单元测试",
+      "从环境变量配置密钥"
+    ],
+    "metadata_updates": {
+      "status": "in_progress",
+      "files_modified": ["src/auth/jwt_utils.py", "tests/test_jwt.py"],
+      "dependencies_added": ["PyJWT", "python-jose"],
+      "test_coverage": "85%"
+    },
+    "session_id": "rest-api-project"
+  }'
+```
+
+---
+
+## 📚 API 参考
+
+> 💡 **提示：** 访问 http://localhost:8000/docs 查看交互式 API 文档
+
+### 端点概览
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/init` | POST | 初始化新的项目会话 |
+| `/branch` | POST | 创建新的内存分支 |
+| `/commit` | POST | 保存进度检查点 |
+| `/context` | POST | 检索结构化上下文 |
+| `/merge` | POST | 将分支合并到另一个分支 |
+| `/log` | POST | 添加日志条目 |
+| `/history` | GET | 获取提交历史 |
+| `/diff` | POST | 查看提交之间的更改 |
+| `/show` | POST | 显示引用处的文件内容 |
+| `/reset` | POST | 将仓库重置到引用 |
+
+---
+
+## 🔌 MCP 集成
+
+### 什么是 MCP？
+
+**模型上下文协议 (MCP)** 使 AI 智能体（如 Claude）能够无缝地与外部工具通信。
+
+### 快速设置
+
+```bash
+# 1. 安装 MCP 支持
+pip install -e .
+
+# 2. 设置服务器 URL
+export GCC_SERVER_URL=http://localhost:8000
+
+# 3. 启动 MCP 代理
+gcc-mcp
+```
+
+### 可用的 MCP 工具
+
+GCC 为 AI 智能体提供 **10 个 MCP 工具**。所有路径通过 `session_id` 自动管理：
+
+| 工具 | 描述 |
+|------|------|
+| `gcc_init` | 使用目标和待办事项初始化会话 |
+| `gcc_branch` | 创建新的功能分支 |
+| `gcc_commit` | 保存进度检查点 |
+| `gcc_context` | 获取完整的会话上下文 |
+| `gcc_merge` | 合并分支 |
+| `gcc_log` | 添加详细的日志条目 |
+| `gcc_history` | 查看提交历史 |
+| `gcc_diff` | 比较提交之间的更改 |
+| `gcc_show` | 显示特定提交的文件内容 |
+| `gcc_reset` | 重置到以前的状态 |
+
+---
+
+## ⚙️ 配置说明
+
+### 环境变量
+
+| 变量 | 描述 | 默认值 |
+|------|------|--------|
+| `GCC_DATA_ROOT` | 基础存储目录 | `/data` |
+| `GCC_SESSION_ID` | 会话标识符 | 自动检测 |
+| `GCC_SERVER_URL` | API 服务器 URL | `http://localhost:8000` |
+| `GCC_LOG_DIR` | 日志目录 | `./logs` |
+| `GCC_ENABLE_AUDIT_LOG` | 启用审计日志 | `true` |
+
+---
+
+## 🛠️ 开发指南
+
+### 项目结构
+
+```
+gcc-mem-system/
+├── src/gcc/
+│   ├── core/              # 核心功能
+│   │   ├── storage.py     # 文件操作
+│   │   ├── git_ops.py     # Git 操作
+│   │   ├── commands.py    # 高级命令
+│   │   └── lock.py        # 文件锁定
+│   ├── server/            # HTTP API
+│   │   ├── app.py         # FastAPI 应用
+│   │   └── endpoints.py   # API 路由
+│   ├── mcp/               # MCP 代理
+│   │   └── proxy.py       # MCP↔HTTP 桥接
+│   └── logging/           # 日志工具
+├── tests/                 # 测试套件
+├── Dockerfile             # 容器镜像
+├── docker-compose.yml     # 多服务设置
+└── Makefile              # 构建自动化
+```
+
+### 运行测试
+
+```bash
+# 所有测试
+make test
+
+# 特定类别
+pytest tests/security -v
+pytest tests/test_logging -v
+
+# 使用 Docker
+make test-docker
+```
+
+---
+
+## 🔍 故障排除
+
+### 常见问题和解决方案
+
+**🔒 锁超时错误**
+
+*问题：* 操作在等待锁时超时
+
+*解决方案：*
+```bash
+# 检查陈旧的锁
+ls /data/<session_id>/.GCC/.lock.*
+
+# 如果安全，删除陈旧的锁
+rm /data/<session_id>/.GCC/.lock.*
+```
+
+**⚠️ 编码错误**
+
+*问题：* 非英文字符导致错误
+
+*解决方案：* 所有文本值仅使用英文
+```bash
+# ❌ 错误（可能导致编码问题）
+{"contribution": "实现用户认证"}
+
+# ✅ 正确（总是有效）
+{"contribution": "Implemented user authentication"}
+```
+
+---
+
+## 🤝 贡献指南
+
+我们欢迎社区贡献！以下是你可以帮助的方式：
+
+### 贡献方式
+
+1. **🐛 报告错误** - 发现问题？在 GitHub 上开一个 issue
+2. **💡 建议功能** - 有想法？开一个讨论或 issue
+3. **📝 改进文档** - 帮助他人理解项目
+4. **🔧 提交代码** - 贡献功能或修复
+
+### 开发设置
+
+```bash
+# Fork 并克隆
+git clone https://github.com/YOUR-USERNAME/gcc-mem-system.git
+cd gcc-mem-system
+
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate
+
+# 安装开发依赖
+pip install -e ".[dev]"
+
+# 运行测试
+pytest tests/ -v
+```
+
+---
+
+## 📝 开源许可
+
+本项目根据 **MIT 许可证** 授权 - 详见 [LICENSE](LICENSE) 文件。
+
+**Copyright (c) 2026 ZUENS2020**
+
+---
+
+<div align="center">
+
+**用 ❤️ 为 AI 智能体打造**
+
+[⬆ 返回顶部](#中文文档)
 
 </div>
