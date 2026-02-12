@@ -4,6 +4,17 @@
 
 This project is inspired by ***Git Context Controller: Manage the Context of LLM-based Agents like Git***.
 
+If you find this work helpful, please cite the original GCC paper:
+
+```bibtex
+@article{wu2025gcc,
+  title={Git Context Controller: Manage the Context of LLM-based Agents like Git},
+  author={Wu, Junde},
+  journal={arXiv preprint arXiv:2508.00031},
+  year={2025}
+}
+```
+
 [English](#english) | [中文](#chinese)
 
 ---
@@ -462,16 +473,4 @@ AI 智能体现在可以直接使用 GCC 工具：
 - gcc_history: 查看提交历史（limit）
 ```
 
-## Citation
 
-If you find this work helpful, please cite the original GCC paper:
-
-```bibtex
-@article{wu2025gcc,
-  title={Git Context Controller: Manage the Context of LLM-based Agents like Git},
-  author={Wu, Junde},
-  journal={arXiv preprint arXiv:2508.00031},
-  year={2025}
-}
-
-```
