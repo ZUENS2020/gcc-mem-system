@@ -84,6 +84,75 @@ gcc-server  # Start API server
 gcc-mcp     # Start MCP proxy (via stdin/stdout)
 ```
 
+### Configuration
+
+GCC can be configured through environment variables. Most have sensible defaults and should not need adjustment for typical use.
+
+#### Server Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GCC_DATA_ROOT` | Data root directory for sessions | `/data` |
+| `GCC_HOST` | Server bind address | `0.0.0.0` |
+| `GCC_PORT` | Server port | `8000` |
+| `GCC_WORKERS` | Number of worker processes | Auto-detected |
+| `GCC_RELOAD` | Enable auto-reload on code changes | `false` |
+| `GCC_ACCESS_LOG` | Enable HTTP access logging | `true` |
+
+#### Git Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GCC_GIT_NAME` | Git user name for commits | `GCC Agent` |
+| `GCC_GIT_EMAIL` | Git email for commits | `gcc@example.com` |
+| `GCC_GIT_DEFAULT_BRANCH` | Default branch name | `main` |
+
+#### Validation & Limits
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GCC_MAX_BRANCH_LENGTH` | Maximum branch name length | `100` |
+| `GCC_MAX_SESSION_LENGTH` | Maximum session ID length | `100` |
+| `GCC_MAX_LIMIT` | Maximum history limit | `1000` |
+| `GCC_MIN_LIMIT` | Minimum history limit | `1` |
+| `GCC_MAX_STRING_LENGTH` | Maximum string field length | `10000` |
+| `GCC_ALLOW_PATH_TRAVERSAL` | Allow path traversal (security risk!) | `false` |
+| `GCC_ENABLE_RATE_LIMIT` | Enable rate limiting | `true` |
+| `GCC_RATE_LIMIT_REQUESTS` | Rate limit requests per minute | `60` |
+
+#### Logging Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GCC_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`) | `info` |
+| `GCC_LOG_DIR` | Directory for log files | `/var/log/gcc` |
+| `GCC_LOG_MAX_BYTES` | Max size per log file before rotation | `10485760` (10MB) |
+| `GCC_LOG_BACKUP_COUNT` | Number of backup logs to keep | `5` |
+| `GCC_ENABLE_AUDIT_LOG` | Enable audit logging for all operations | `true` |
+| `GCC_ENABLE_GIT_LOG` | Enable Git operation logging | `true` |
+
+#### MCP Client Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `GCC_SERVER_URL` | HTTP API server URL for MCP proxy | `http://localhost:8000` |
+| `GCC_SESSION_ID` | Default session ID for MCP requests | Auto-generated |
+
+**Example - Docker Compose with custom configuration:**
+```yaml
+services:
+  gcc-server:
+    image: gcc-mem-system
+    environment:
+      - GCC_DATA_ROOT=/data
+      - GCC_PORT=8000
+      -GCC_LOG_LEVEL=debug
+      - GCC_GIT_NAME=My AI Agent
+      - GCC_GIT_EMAIL=agent@example.com
+    volumes:
+      - ./data:/data
+```
+
 ### API Reference
 
 | Endpoint | Method | Description | Key Parameters |
@@ -221,6 +290,75 @@ pip install -e .
 gcc-server  # 启动 API 服务器
 # 或者
 gcc-mcp     # 启动 MCP 代理（通过 stdin/stdout）
+```
+
+### 配置选项
+
+GCC 可以通过环境变量进行配置。大多数变量都有合理的默认值，通常情况下不需要调整。
+
+#### 服务器配置
+
+| 变量 | 描述 | 默认值 |
+| :--- | :--- | :--- |
+| `GCC_DATA_ROOT` | 会话数据根目录 | `/data` |
+| `GCC_HOST` | 服务器绑定地址 | `0.0.0.0` |
+| `GCC_PORT` | 服务器端口 | `8000` |
+| `GCC_WORKERS` | 工作进程数 | 自动检测 |
+| `GCC_RELOAD` | 代码更改时自动重载 | `false` |
+| `GCC_ACCESS_LOG` | 启用 HTTP 访问日志 | `true` |
+
+#### Git 配置
+
+| 变量 | 描述 | 默认值 |
+| :--- | :--- | :--- |
+| `GCC_GIT_NAME` | Git 提交用户名 | `GCC Agent` |
+| `GCC_GIT_EMAIL` | Git 提交邮箱 | `gcc@example.com` |
+| `GCC_GIT_DEFAULT_BRANCH` | 默认分支名称 | `main` |
+
+#### 验证与限制
+
+| 变量 | 描述 | 默认值 |
+| :--- | :--- | :--- |
+| `GCC_MAX_BRANCH_LENGTH` | 最大分支名称长度 | `100` |
+| `GCC_MAX_SESSION_LENGTH` | 最大会话 ID 长度 | `100` |
+| `GCC_MAX_LIMIT` | 最大历史记录条数 | `1000` |
+| `GCC_MIN_LIMIT` | 最小历史记录条数 | `1` |
+| `GCC_MAX_STRING_LENGTH` | 最大字符串字段长度 | `10000` |
+| `GCC_ALLOW_PATH_TRAVERSAL` | 允许路径遍历（安全风险！） | `false` |
+| `GCC_ENABLE_RATE_LIMIT` | 启用速率限制 | `true` |
+| `GCC_RATE_LIMIT_REQUESTS` | 每分钟速率限制请求数 | `60` |
+
+#### 日志配置
+
+| 变量 | 描述 | 默认值 |
+| :--- | :--- | :--- |
+| `GCC_LOG_LEVEL` | 日志级别（`debug`, `info`, `warning`, `error`） | `info` |
+| `GCC_LOG_DIR` | 日志文件目录 | `/var/log/gcc` |
+| `GCC_LOG_MAX_BYTES` | 日志文件轮转前的最大大小 | `10485760` (10MB) |
+| `GCC_LOG_BACKUP_COUNT` | 保留的备份日志数量 | `5` |
+| `GCC_ENABLE_AUDIT_LOG` | 启用所有操作的审计日志 | `true` |
+| `GCC_ENABLE_GIT_LOG` | 启用 Git 操作日志 | `true` |
+
+#### MCP 客户端配置
+
+| 变量 | 描述 | 默认值 |
+| :--- | :--- | :--- |
+| `GCC_SERVER_URL` | MCP 代理的 HTTP API 服务器 URL | `http://localhost:8000` |
+| `GCC_SESSION_ID` | MCP 请求的默认会话 ID | 自动生成 |
+
+**示例 - Docker Compose 自定义配置：**
+```yaml
+services:
+  gcc-server:
+    image: gcc-mem-system
+    environment:
+      - GCC_DATA_ROOT=/data
+      - GCC_PORT=8000
+      - GCC_LOG_LEVEL=debug
+      - GCC_GIT_NAME=我的 AI 智能体
+      - GCC_GIT_EMAIL=agent@example.com
+    volumes:
+      - ./data:/data
 ```
 
 ### API 参考
