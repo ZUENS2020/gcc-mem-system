@@ -19,7 +19,6 @@ from ..core.storage import normalize_session_id
 
 class InitRequest(BaseModel):
     """Request model for session initialization."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     goal: Optional[str] = Field(None, description="Session goal", max_length=10000)
     todo: Optional[List[str]] = Field(None, description="Todo items")
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
@@ -27,7 +26,6 @@ class InitRequest(BaseModel):
 
 class BranchRequest(BaseModel):
     """Request model for branch creation."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     branch: str = Field(..., description="Branch name", max_length=100)
     purpose: str = Field(..., description="Branch purpose", max_length=10000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
@@ -35,7 +33,6 @@ class BranchRequest(BaseModel):
 
 class LogRequest(BaseModel):
     """Request model for log appending."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     branch: str = Field(..., description="Branch name", max_length=100)
     entries: List[str] = Field(..., description="Log entries to append")
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
@@ -43,7 +40,6 @@ class LogRequest(BaseModel):
 
 class CommitRequest(BaseModel):
     """Request model for commit creation."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     branch: str = Field(..., description="Branch name", max_length=100)
     contribution: str = Field(..., description="Commit contribution", min_length=1, max_length=10000)
     purpose: Optional[str] = Field(None, description="Branch purpose", max_length=10000)
@@ -55,7 +51,6 @@ class CommitRequest(BaseModel):
 
 class MergeRequest(BaseModel):
     """Request model for branch merging."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     source_branch: str = Field(..., description="Source branch name", max_length=100)
     target_branch: Optional[str] = Field(None, description="Target branch name", max_length=100)
     summary: Optional[str] = Field(None, description="Merge summary", max_length=10000)
@@ -64,7 +59,6 @@ class MergeRequest(BaseModel):
 
 class ContextRequest(BaseModel):
     """Request model for context retrieval."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     branch: Optional[str] = Field(None, description="Branch name", max_length=100)
     commit_id: Optional[str] = Field(None, description="Commit ID", max_length=100)
     log_tail: Optional[int] = Field(None, description="Number of log lines", ge=1, le=10000)
@@ -74,14 +68,12 @@ class ContextRequest(BaseModel):
 
 class HistoryRequest(BaseModel):
     """Request model for history retrieval."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     limit: int = Field(20, description="Maximum commits to return", ge=1, le=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
 class DiffRequest(BaseModel):
     """Request model for diff retrieval."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     from_ref: str = Field(..., description="Source ref", max_length=1000)
     to_ref: Optional[str] = Field(None, description="Target ref", max_length=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
@@ -89,7 +81,6 @@ class DiffRequest(BaseModel):
 
 class ShowRequest(BaseModel):
     """Request model for file content retrieval."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     ref: str = Field(..., description="Git ref", max_length=1000)
     path: Optional[str] = Field(None, description="File path", max_length=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
@@ -97,7 +88,6 @@ class ShowRequest(BaseModel):
 
 class ResetRequest(BaseModel):
     """Request model for repository reset."""
-    root: str = Field(..., description="Project root path", max_length=1000)
     ref: str = Field(..., description="Git ref to reset to", max_length=1000)
     mode: str = Field("soft", description="Reset mode (soft/hard)")
     confirm: bool = Field(False, description="Confirm hard reset")
@@ -106,38 +96,41 @@ class ResetRequest(BaseModel):
 
 # Path resolution helper
 
-def _resolve_path(root: str, session_id: Optional[str] = None) -> Path:
+def _resolve_path(session_id: Optional[str]) -> Path:
     """Resolve and validate project root path.
 
     Args:
-        root: Project root path string
-        session_id: Optional session identifier
+        session_id: Session identifier (auto-generated if None)
 
     Returns:
         Resolved Path object
 
     Raises:
-        HTTPException: If path is invalid or outside allowed boundaries
+        HTTPException: If path resolution fails
 
     Note:
-        When GCC_DATA_ROOT env var is set, path is resolved under that directory
-        with session_id subdirectory for container isolation.
+        - Container mode: /data/sessions/{session_id}/
+        - All paths are auto-managed based on session_id
     """
     from ..core.validators import Validators
 
     base = os.environ.get("GCC_DATA_ROOT")
-    if base:
-        # Container mode: use session_id for isolation
-        normalized_session = normalize_session_id(session_id)
-        base_path = Path(base).resolve()
-        session_path = (base_path / normalized_session).resolve()
-        # Verify path is within base
-        Validators.validate_path_safe(str(session_path), base_path)
-        return session_path
+    if not base:
+        # Not in container mode - should not happen in production
+        raise HTTPException(
+            status_code=500,
+            detail="GCC must run in container mode with GCC_DATA_ROOT set"
+        )
 
-    # Direct mode: resolve and validate path
-    resolved = Path(root).expanduser().resolve()
-    return Validators.validate_path_safe(str(resolved))
+    # Container mode: use sessions subdirectory for organization
+    normalized_session = normalize_session_id(session_id)
+    base_path = Path(base).resolve()
+    # Use /data/sessions/{session_id}/ structure
+    session_path = (base_path / "sessions" / normalized_session).resolve()
+    # Verify path is within base/sessions
+    sessions_root = (base_path / "sessions").resolve()
+    Validators.validate_path_safe(str(session_path), sessions_root)
+    return session_path
 
 
 # API Router
@@ -160,7 +153,7 @@ def init(req: InitRequest) -> Dict[str, Any]:
     Returns initialization status and paths.
     """
     return commands.init(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.goal,
         req.todo,
         req.session_id,
@@ -182,7 +175,7 @@ def create_branch(req: BranchRequest) -> Dict[str, Any]:
     Returns branch creation status.
     """
     return commands.branch(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.branch,
         req.purpose,
         req.session_id,
@@ -203,7 +196,7 @@ def append_log(req: LogRequest) -> Dict[str, Any]:
     Returns log operation status.
     """
     return commands.log(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.branch,
         req.entries,
         req.session_id,
@@ -229,7 +222,7 @@ def commit(req: CommitRequest) -> Dict[str, Any]:
     Returns commit creation status with commit ID.
     """
     return commands.commit(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.branch,
         req.contribution,
         req.purpose,
@@ -255,7 +248,7 @@ def merge(req: MergeRequest) -> Dict[str, Any]:
     Returns merge operation status.
     """
     return commands.merge(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.source_branch,
         req.target_branch,
         req.summary,
@@ -279,7 +272,7 @@ def context(req: ContextRequest) -> Dict[str, Any]:
     Returns context dictionary with requested information.
     """
     return commands.context(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.branch,
         req.commit_id,
         req.log_tail,
@@ -301,7 +294,7 @@ def history(req: HistoryRequest) -> Dict[str, Any]:
     Returns list of commits.
     """
     return commands.history(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.limit,
         req.session_id,
     )
@@ -321,7 +314,7 @@ def diff(req: DiffRequest) -> Dict[str, Any]:
     Returns diff output string.
     """
     return commands.diff(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.from_ref,
         req.to_ref,
         req.session_id,
@@ -342,7 +335,7 @@ def show(req: ShowRequest) -> Dict[str, Any]:
     Returns file content string.
     """
     return commands.show(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.ref,
         req.path,
         req.session_id,
@@ -364,7 +357,7 @@ def reset(req: ResetRequest) -> Dict[str, Any]:
     Returns reset operation status.
     """
     return commands.reset(
-        _resolve_path(req.root, req.session_id),
+        _resolve_path(req.session_id),
         req.ref,
         req.mode,
         req.confirm,

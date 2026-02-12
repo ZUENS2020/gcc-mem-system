@@ -35,16 +35,15 @@ COMMIT_PROMPT_GUIDE = (
 TOOLS = [
     {
         "name": "gcc_init",
-        "description": "Initialize a session memory store under .GCC/sessions/<session_id>/. Creates main.md (goal + todo) and prepares a git-backed workspace for memory commits. IMPORTANT: Use English only for all text values to avoid encoding issues.",
+        "description": "Initialize a session memory store. Creates main.md (goal + todo) and prepares a git-backed workspace for memory commits. IMPORTANT: Use English only for all text values to avoid encoding issues. All paths are automatically managed by the server using session_id.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "goal": {"type": "string"},
-                "todo": {"type": "array", "items": {"type": "string"}},
-                "session_id": {"type": "string"},
+                "goal": {"type": "string", "description": "Session goal or objective"},
+                "todo": {"type": "array", "items": {"type": "string"}, "description": "List of todo items"},
+                "session_id": {"type": "string", "description": "Unique session identifier (auto-generated if not provided)"},
             },
-            "required": ["root"],
+            "required": [],
         },
     },
     {
@@ -53,12 +52,11 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "branch": {"type": "string"},
-                "purpose": {"type": "string"},
-                "session_id": {"type": "string"},
+                "branch": {"type": "string", "description": "Branch name"},
+                "purpose": {"type": "string", "description": "Branch purpose"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "branch", "purpose"],
+            "required": ["branch", "purpose"],
         },
     },
     {
@@ -67,16 +65,15 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "branch": {"type": "string"},
-                "contribution": {"type": "string"},
-                "purpose": {"type": "string"},
-                "log_entries": {"type": "array", "items": {"type": "string"}},
-                "metadata_updates": {"type": "object"},
-                "update_main": {"type": "string"},
-                "session_id": {"type": "string"},
+                "branch": {"type": "string", "description": "Branch name"},
+                "contribution": {"type": "string", "description": "This commit's contribution"},
+                "purpose": {"type": "string", "description": "Branch purpose (optional if branch exists)"},
+                "log_entries": {"type": "array", "items": {"type": "string"}, "description": "Log entries to add"},
+                "metadata_updates": {"type": "object", "description": "Metadata to update"},
+                "update_main": {"type": "string", "description": "Text to append to main.md"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "branch", "contribution"],
+            "required": ["branch", "contribution"],
         },
     },
     {
@@ -85,13 +82,12 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "source_branch": {"type": "string"},
-                "target_branch": {"type": "string"},
-                "summary": {"type": "string"},
-                "session_id": {"type": "string"},
+                "source_branch": {"type": "string", "description": "Source branch to merge from"},
+                "target_branch": {"type": "string", "description": "Target branch (default: main)"},
+                "summary": {"type": "string", "description": "Merge summary"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "source_branch"],
+            "required": ["source_branch"],
         },
     },
     {
@@ -100,14 +96,13 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "branch": {"type": "string"},
-                "commit_id": {"type": "string"},
-                "log_tail": {"type": "integer"},
-                "metadata_segment": {"type": "string"},
-                "session_id": {"type": "string"},
+                "branch": {"type": "string", "description": "Branch name to get context for"},
+                "commit_id": {"type": "string", "description": "Specific commit ID"},
+                "log_tail": {"type": "integer", "description": "Number of recent log entries"},
+                "metadata_segment": {"type": "string", "description": "Metadata key to retrieve"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root"],
+            "required": [],
         },
     },
     {
@@ -116,12 +111,11 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "branch": {"type": "string"},
-                "entries": {"type": "array", "items": {"type": "string"}},
-                "session_id": {"type": "string"},
+                "branch": {"type": "string", "description": "Branch name"},
+                "entries": {"type": "array", "items": {"type": "string"}, "description": "Log entries"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "branch", "entries"],
+            "required": ["branch", "entries"],
         },
     },
     {
@@ -130,11 +124,10 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "limit": {"type": "integer"},
-                "session_id": {"type": "string"},
+                "limit": {"type": "integer", "description": "Maximum commits to return"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root"],
+            "required": [],
         },
     },
     {
@@ -143,12 +136,11 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "from_ref": {"type": "string"},
-                "to_ref": {"type": "string"},
-                "session_id": {"type": "string"},
+                "from_ref": {"type": "string", "description": "Source git reference"},
+                "to_ref": {"type": "string", "description": "Target git reference (default: HEAD)"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "from_ref"],
+            "required": ["from_ref"],
         },
     },
     {
@@ -157,12 +149,11 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "ref": {"type": "string"},
-                "path": {"type": "string"},
-                "session_id": {"type": "string"},
+                "ref": {"type": "string", "description": "Git reference (commit hash, branch, tag)"},
+                "path": {"type": "string", "description": "File path within git repo"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "ref"],
+            "required": ["ref"],
         },
     },
     {
@@ -171,13 +162,12 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "root": {"type": "string"},
-                "ref": {"type": "string"},
-                "mode": {"type": "string"},
-                "confirm": {"type": "boolean"},
-                "session_id": {"type": "string"},
+                "ref": {"type": "string", "description": "Git reference to reset to"},
+                "mode": {"type": "string", "description": "Reset mode: soft or hard"},
+                "confirm": {"type": "boolean", "description": "Required for hard reset"},
+                "session_id": {"type": "string", "description": "Session identifier (uses default if not provided)"},
             },
-            "required": ["root", "ref"],
+            "required": ["ref"],
         },
     },
 ]
@@ -288,6 +278,8 @@ def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, A
     }
     if tool_name not in mapping:
         raise ValueError(f"Unknown tool: {tool_name}")
+
+    # Server handles path management - just forward arguments
     payload = _ensure_session_id(arguments)
     return _post(mapping[tool_name], payload)
 
