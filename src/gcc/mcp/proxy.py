@@ -216,8 +216,35 @@ def _default_session_id() -> str:
     return DEFAULT_SESSION_ID
 
 
+def _is_session_locked() -> bool:
+    """Check if session_id is locked to configured value.
+
+    Returns True if:
+    - GCC_SESSION_ID environment variable is set, OR
+    - Running in Docker with valid HOSTNAME
+
+    This prevents AI from overriding configured session IDs.
+
+    Returns:
+        True if session is locked and should use configured value only
+    """
+    # Check explicit environment variable
+    if os.environ.get(SESSION_ID_ENV):
+        return True
+
+    # Check Docker environment
+    hostname = os.environ.get("HOSTNAME", "")
+    if hostname and len(hostname) >= 12:
+        return True
+
+    return False
+
+
 def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Ensure session_id is set in arguments.
+
+    If session is locked (via env var or Docker), ignores AI-provided session_id.
+    Otherwise, uses AI-provided value or generates default.
 
     Args:
         arguments: Tool arguments dictionary
@@ -225,9 +252,15 @@ def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Arguments with session_id guaranteed to be set
     """
-    if "session_id" not in arguments or not arguments.get("session_id"):
-        arguments = dict(arguments)
+    arguments = dict(arguments)
+
+    # If locked, always use configured value (ignore AI input)
+    if _is_session_locked():
         arguments["session_id"] = _default_session_id()
+    elif "session_id" not in arguments or not arguments.get("session_id"):
+        # Not locked: use AI-provided or generate default
+        arguments["session_id"] = _default_session_id()
+
     return arguments
 
 

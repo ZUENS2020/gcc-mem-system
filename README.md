@@ -147,6 +147,32 @@ services:
       - ./data:/data
 ```
 
+#### Session Locking
+
+When `session_id` is configured via environment variable or Docker container ID, GCC automatically **locks** the session to prevent AI agents from accidentally overriding it.
+
+**Locking Conditions:**
+- `GCC_SESSION_ID` environment variable is set, OR
+- Running in Docker with a valid `HOSTNAME` (length ≥ 12)
+
+**When Locked:**
+- AI-provided `session_id` parameters in tool calls are **ignored**
+- Only the configured value is used
+- Ensures production and container environments maintain session isolation
+
+**When Unlocked (Local Development):**
+- No `GCC_SESSION_ID` set, no Docker hostname
+- AI agents can freely specify `session_id` in tool calls
+- Falls back to auto-generated `mcp-<pid>` if not provided
+
+**Examples:**
+
+| Environment | Config | Behavior |
+|:---|:---|:---|
+| **Production** | `GCC_SESSION_ID=prod-2024` | Locked → Ignores AI's `session_id` |
+| **Docker** | `HOSTNAME=abc123def456...` | Locked → Ignores AI's `session_id` |
+| **Local Dev** | No config set | Unlocked → AI can specify `session_id` |
+
 ### API Reference
 
 | Endpoint | Method | Description | Key Parameters |
@@ -348,6 +374,32 @@ services:
     volumes:
       - ./data:/data
 ```
+
+#### Session 锁定机制
+
+当通过环境变量或 Docker 容器 ID 配置 `session_id` 时，GCC 会自动**锁定**会话，防止 AI 智能体意外覆盖它。
+
+**锁定条件：**
+- 设置了 `GCC_SESSION_ID` 环境变量，或
+- 在 Docker 中运行且 `HOSTNAME` 有效（长度 ≥ 12）
+
+**锁定时的行为：**
+- AI 在工具调用中提供的 `session_id` 参数将被**忽略**
+- 仅使用配置的值
+- 确保生产和容器环境保持会话隔离
+
+**未锁定时（本地开发）：**
+- 未设置 `GCC_SESSION_ID`，无 Docker 主机名
+- AI 智能体可以在工具调用中自由指定 `session_id`
+- 如未提供，回退到自动生成的 `mcp-<pid>`
+
+**示例：**
+
+| 环境 | 配置 | 行为 |
+|:---|:---|:---|
+| **生产环境** | `GCC_SESSION_ID=prod-2024` | 锁定 → 忽略 AI 的 `session_id` |
+| **Docker** | `HOSTNAME=abc123def456...` | 锁定 → 忽略 AI 的 `session_id` |
+| **本地开发** | 无配置 | 未锁定 → AI 可指定 `session_id` |
 
 ### API 参考
 
