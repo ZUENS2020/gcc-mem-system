@@ -355,7 +355,7 @@ services:
       - GCC_DATA_ROOT=/data
       - GCC_PORT=8000
       - GCC_LOG_LEVEL=debug
-      - GCC_GIT_NAME=我的 AI 智能体
+      - GCC_GIT_NAME=My AI Agent
       - GCC_GIT_EMAIL=agent@example.com
     volumes:
       - ./data:/data
@@ -376,8 +376,8 @@ services:
 curl -X POST http://localhost:8000/init \
   -H "Content-Type: application/json" \
   -d '{
-    "goal": "构建网页爬虫",
-    "todo": ["研究库", "实现爬取"]
+    "goal": "Build a web scraper",
+    "todo": ["Research libraries", "Implement scraping"]
   }'
 ```
 **注意**: 无需 `session_id` 或路径 - 一切都是自动管理的。
@@ -386,9 +386,9 @@ curl -X POST http://localhost:8000/init \
 ```json
 {
   "branch": "feature-x",
-  "contribution": "实现了用户身份验证逻辑",
-  "log_entries": ["修改了 auth.py", "添加了 JWT 测试"],
-  "metadata_updates": {"status": "进行中", "coverage": 85}
+  "contribution": "Implemented user authentication logic",
+  "log_entries": ["Modified auth.py", "Added tests for JWT"],
+  "metadata_updates": {"status": "in-progress", "coverage": 85}
 }
 ```
 **注意**: 服务器使用配置的 `session_id` 自动解析路径。
