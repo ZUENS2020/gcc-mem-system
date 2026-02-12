@@ -95,38 +95,38 @@ GCC provides a **git-like memory system** that makes this possible!
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                         AI Agent / Client                         │
-│                    (Claude, Custom Apps, etc.)                    │
+│                         AI Agent / Client                        │
+│                    (Claude, Custom Apps, etc.)                   │
 └────────────────────┬─────────────────────────────────────────────┘
                      │
                      │ MCP Protocol / HTTP API
                      │
-┌────────────────────▼─────────────────────────────────────────────┐
-│                      GCC Context Controller                       │
+┌────────────────────▼───────────────────────────────────────────┐
+│                      GCC Context Controller                    │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
 │  │ MCP Proxy    │  │  FastAPI     │  │  Commands    │          │
 │  │  (stdio)     │──│   Server     │──│   Layer      │          │
 │  └──────────────┘  └──────────────┘  └──────┬───────┘          │
-│                                               │                   │
+│                                               │                │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────▼───────┐          │
 │  │   Storage    │──│  Git Ops     │──│    Lock      │          │
 │  │   Manager    │  │  (libgit2)   │  │   Manager    │          │
 │  └──────────────┘  └──────────────┘  └──────────────┘          │
-└────────────────────┬─────────────────────────────────────────────┘
+└────────────────────┬───────────────────────────────────────────┘
                      │
                      │ File System
                      │
-┌────────────────────▼─────────────────────────────────────────────┐
-│                      Persistent Storage                           │
-│  /data/<session_id>/.GCC/                                        │
-│    ├── sessions/<session_id>/                                    │
+┌────────────────────▼────────────────────────────────────────────┐
+│                      Persistent Storage                         │
+│  /data/<session_id>/.GCC/                                       │
+│    ├── sessions/<session_id>/                                   │
 │    │   ├── main.md                  (Goals & Todos)             │
-│    │   └── branches/<branch>/                                    │
+│    │   └── branches/<branch>/                                   │
 │    │       ├── commit.md            (Commit History)            │
 │    │       ├── log.md               (Action Logs)               │
 │    │       └── metadata.yaml        (Structured Data)           │
 │    └── .git/                        (Version Control)           │
-└──────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Workflow: From Init to Context Retrieval
