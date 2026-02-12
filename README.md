@@ -107,7 +107,7 @@ GCC provides a **git-like memory system** that makes this possible!
 │  │ MCP Proxy    │  │  FastAPI     │  │  Commands    │          │
 │  │  (stdio)     │──│   Server     │──│   Layer      │          │
 │  └──────────────┘  └──────────────┘  └──────┬───────┘          │
-│                                               │                │
+│                                             │                  │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────▼───────┐          │
 │  │   Storage    │──│  Git Ops     │──│    Lock      │          │
 │  │   Manager    │  │  (libgit2)   │  │   Manager    │          │
