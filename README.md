@@ -227,7 +227,7 @@ curl -X POST http://localhost:8000/init \
     "todo": [
       "Design database schema",
       "Implement CRUD endpoints",
-      "Add authentication"
+      "Add authentication middleware"
     ],
     "session_id": "my-api-project"
   }'
