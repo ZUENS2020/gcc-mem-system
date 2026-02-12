@@ -1,6 +1,6 @@
 # GCC (Git-Context-Controller)
 
-**Zero Path Knowledge • Complete Memory Management • MCP Integration • Docker Ready**
+**AI Memory Management • Git-Backed Context • MCP Integration • Docker Ready**
 
 [English](#english) | [中文](#chinese)
 
@@ -13,8 +13,8 @@ GCC is a unified memory and context management system for AI agents. It leverage
 
 ### Key Features
 
-- **Zero Path Knowledge Required**: AI agents only need to provide a `session_id`. The server automatically manages all file system paths using the structure `/data/sessions/{session_id}/`. No path configuration or file system knowledge required.
 - **Git-Backed Memory**: Every change to an agent's context is automatically committed to a local Git repository, ensuring a full audit trail and easy state recovery.
+- **Session-Based Isolation**: Each session has its own workspace with unique `session_id`. Simply provide the session identifier and the server handles the storage structure automatically.
 - **Hierarchical Context Management**: Organize work into isolated **Sessions** and **Branches**.
 - **Structured Memory Components**:
   - **Roadmap (`main.md`)**: High-level goals and task lists.
@@ -28,9 +28,9 @@ GCC is a unified memory and context management system for AI agents. It leverage
 
 ### Architecture & Concepts
 
-#### Automatic Path Management
+#### Directory Structure
 
-GCC completely abstracts file system paths from AI agents. Simply provide a `session_id` and the server handles everything:
+Each session stores its data in a dedicated directory:
 
 ```
 /data/sessions/{session_id}/.GCC/
@@ -43,14 +43,8 @@ GCC completely abstracts file system paths from AI agents. Simply provide a `ses
 └── .git/               # Version control
 ```
 
-**No path parameters needed** - The server:
-- Auto-generates unique session IDs if not provided
-- Creates and manages all directories automatically
-- Validates paths to prevent security issues
-- Handles all Git operations transparently
-
 #### Sessions
-A session is an isolated workspace. All data for a session is stored in its own directory with a dedicated Git repository. Path: `/data/sessions/{session_id}/`.
+A session is an isolated workspace. All data for a session is stored in its own directory with a dedicated Git repository. Use `session_id` to identify which workspace to operate on.
 
 #### Branches
 Within a session, you can create multiple branches to explore different approaches. Each branch has its own set of memory files.
@@ -163,7 +157,7 @@ services:
 | `/context` | `POST` | Get current memory | `branch`, `commit_id`, `log_tail`, `metadata_segment` |
 | `/history` | `POST` | View git history | `limit`, `session_id` |
 
-**Example - Initialize Session (Zero Configuration):**
+**Example - Initialize Session:**
 ```bash
 curl -X POST http://localhost:8000/init \
   -H "Content-Type: application/json" \
@@ -172,7 +166,7 @@ curl -X POST http://localhost:8000/init \
     "todo": ["Research libraries", "Implement scraping"]
   }'
 ```
-**Note**: No `session_id` or paths required - everything is auto-managed.
+**Note**: `session_id` is optional and will be auto-generated if not provided.
 
 **Example - Record Memory Checkpoint:**
 ```json
@@ -183,7 +177,7 @@ curl -X POST http://localhost:8000/init \
   "metadata_updates": {"status": "in-progress", "coverage": 85}
 }
 ```
-**Note**: Server automatically resolves paths using configured `session_id`.
+**Note**: Server uses the configured `session_id` to locate the correct workspace.
 
 ### MCP Integration
 
@@ -203,7 +197,7 @@ Configure GCC as an MCP server in your Claude Desktop config:
 }
 ```
 
-AI agents can now use GCC tools without any path knowledge:
+AI agents can use GCC tools directly:
 ```
 - gcc_init: Initialize session (goal, todo, optional session_id)
 - gcc_branch: Create exploration branch (branch, purpose)
@@ -221,8 +215,8 @@ GCC (Git-Context-Controller) 是一个为 AI 智能体设计的统一内存与�
 
 ### 核心特性
 
-- **零路径知识要求**: AI 智能体只需提供 `session_id`。服务器自动使用 `/data/sessions/{session_id}/` 结构管理所有文件系统路径。无需路径配置或文件系统知识。
 - **Git 驱动的内存**: 智能体上下文的每次更改都会自动提交到本地 Git 仓库，确保完整的审计追踪和轻松的状态恢复。
+- **基于会话的隔离**: 每个会话都有独立的工作空间和唯一的 `session_id`。只需提供会话标识符，服务器会自动处理存储结构。
 - **分层上下文管理**: 将工作组织到隔离的 **会话 (Sessions)** 和 **分支 (Branches)** 中。
 - **结构化内存组件**:
   - **路线图 (`main.md`)**: 高级目标和任务列表。
@@ -236,9 +230,9 @@ GCC (Git-Context-Controller) 是一个为 AI 智能体设计的统一内存与�
 
 ### 架构与概念
 
-#### 自动路径管理
+#### 目录结构
 
-GCC 完全从 AI 智能体抽象文件系统路径。只需提供 `session_id`，服务器处理一切：
+每个会话在其专用目录中存储数据：
 
 ```
 /data/sessions/{session_id}/.GCC/
@@ -251,14 +245,8 @@ GCC 完全从 AI 智能体抽象文件系统路径。只需提供 `session_id`�
 └── .git/               # 版本控制
 ```
 
-**无需路径参数** - 服务器自动：
-- 如果未提供，自动生成唯一会话 ID
-- 自动创建和管理所有目录
-- 验证路径以防止安全问题
-- 透明地处理所有 Git 操作
-
 #### 会话 (Sessions)
-会话是一个隔离的工作区。会话的所有数据都存储在拥有独立 Git 仓库的目录中。路径：`/data/sessions/{session_id}/`。
+会话是一个隔离的工作区。会话的所有数据都存储在拥有独立 Git 仓库的目录中。使用 `session_id` 来标识要操作的工作空间。
 
 #### 分支 (Branches)
 在一个会话内，您可以创建多个分支来探索不同的方法。每个分支都有自己的一套内存文件。
@@ -371,7 +359,7 @@ services:
 | `/context` | `POST` | 获取当前内存 | `branch`, `commit_id`, `log_tail`, `metadata_segment` |
 | `/history` | `POST` | 查看 Git 历史 | `limit`, `session_id` |
 
-**示例 - 初始化会话（零配置）：**
+**示例 - 初始化会话：**
 ```bash
 curl -X POST http://localhost:8000/init \
   -H "Content-Type: application/json" \
@@ -380,7 +368,7 @@ curl -X POST http://localhost:8000/init \
     "todo": ["Research libraries", "Implement scraping"]
   }'
 ```
-**注意**: 无需 `session_id` 或路径 - 一切都是自动管理的。
+**注意**: `session_id` 是可选的，如果未提供将自动生成。
 
 **示例 - 记录内存检查点：**
 ```json
@@ -391,7 +379,7 @@ curl -X POST http://localhost:8000/init \
   "metadata_updates": {"status": "in-progress", "coverage": 85}
 }
 ```
-**注意**: 服务器使用配置的 `session_id` 自动解析路径。
+**注意**: 服务器使用配置的 `session_id` 来定位正确的工作空间。
 
 ### MCP 集成
 
@@ -411,7 +399,7 @@ curl -X POST http://localhost:8000/init \
 }
 ```
 
-AI 智能体现在可以使用 GCC 工具而无需任何路径知识：
+AI 智能体现在可以直接使用 GCC 工具：
 ```
 - gcc_init: 初始化会话（goal, todo, 可选 session_id）
 - gcc_branch: 创建探索分支（branch, purpose）
