@@ -1,7 +1,7 @@
 """Middleware for GCC FastAPI server.
 
 Provides exception handling, request tracking, rate limiting,
-and other cross-cutting concerns.
+audit logging, and other cross-cutting concerns.
 """
 from __future__ import annotations
 
@@ -25,12 +25,14 @@ from ..core.exceptions import (
     LockError,
     RateLimitError,
 )
+from ..logging.audit import log_operation
 
 
 class ExceptionHandlingMiddleware:
     """Custom exception handler for GCC exceptions.
 
-    Converts GCC exception types into appropriate HTTP responses.
+    Converts GCC exception types into appropriate HTTP responses
+    and logs all errors for audit purposes.
     """
 
     @staticmethod
@@ -44,59 +46,63 @@ class ExceptionHandlingMiddleware:
         Returns:
             JSONResponse with appropriate status code and error details
         """
+        # Determine error type and response
+        error_type = "unknown_error"
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        detail = "An internal error occurred. Please try again later."
+
         if isinstance(exc, ValidationError):
-            return JSONResponse(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"error": "validation_error", "detail": str(exc)},
-            )
+            error_type = "validation_error"
+            status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+            detail = str(exc)
         elif isinstance(exc, BranchNotFoundError):
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "branch_not_found", "detail": str(exc)},
-            )
+            error_type = "branch_not_found"
+            status_code = status.HTTP_404_NOT_FOUND
+            detail = str(exc)
         elif isinstance(exc, SessionNotFoundError):
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "session_not_found", "detail": str(exc)},
-            )
+            error_type = "session_not_found"
+            status_code = status.HTTP_404_NOT_FOUND
+            detail = str(exc)
         elif isinstance(exc, LockError):
-            return JSONResponse(
-                status_code=status.HTTP_423_LOCKED,
-                content={"error": "lock_error", "detail": str(exc)},
-            )
+            error_type = "lock_error"
+            status_code = status.HTTP_423_LOCKED
+            detail = str(exc)
         elif isinstance(exc, RateLimitError):
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={"error": "rate_limit_exceeded", "detail": str(exc)},
-            )
+            error_type = "rate_limit_exceeded"
+            status_code = status.HTTP_429_TOO_MANY_REQUESTS
+            detail = str(exc)
         elif isinstance(exc, (RepositoryError, StorageError)):
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error": "storage_error",
-                    "detail": "Storage operation failed. Please try again.",
-                },
-            )
+            error_type = "storage_error"
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            detail = "Storage operation failed. Please try again."
         elif isinstance(exc, GCCError):
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"error": "gcc_error", "detail": str(exc)},
-            )
-        else:
-            # Unknown error - don't expose internal details
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error": "internal_error",
-                    "detail": "An internal error occurred. Please try again later.",
-                },
-            )
+            error_type = "gcc_error"
+            status_code = status.HTTP_400_BAD_REQUEST
+            detail = str(exc)
+
+        # Log error for audit
+        log_operation(
+            action=f"error_{error_type}",
+            params={
+                "method": request.method,
+                "url": str(request.url),
+                "error_type": error_type,
+            },
+            result="error",
+            error=str(exc),
+        )
+
+        return JSONResponse(
+            status_code=status_code,
+            content={"error": error_type, "detail": detail},
+        )
 
 
 class RequestTrackingMiddleware(BaseHTTPMiddleware):
     """Add request ID and timing information to requests.
 
     Generates unique request IDs and measures processing time.
+    Also logs all requests for audit trail.
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -116,6 +122,10 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
         # Record start time
         start_time = time.time()
 
+        # Extract endpoint info
+        endpoint = getattr(request.state, "route", None)
+        endpoint_name = endpoint.path if endpoint else "unknown"
+
         # Process request
         response = await call_next(request)
 
@@ -125,6 +135,19 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
         # Add headers
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time"] = f"{process_time:.3f}"
+
+        # Log successful request for audit
+        log_operation(
+            action=f"api_{request.method.lower()}",
+            params={
+                "method": request.method,
+                "url": str(request.url),
+                "endpoint": endpoint_name,
+                "status_code": response.status_code,
+                "process_time": f"{process_time:.3f}",
+            },
+            result="success" if response.status_code < 400 else "error",
+        )
 
         return response
 

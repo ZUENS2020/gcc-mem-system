@@ -4,11 +4,15 @@ Creates and configures the FastAPI app with all endpoints and middleware.
 """
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
 
 from .config import GCCConfig, get_config
 from .endpoints import router
 from .middleware import setup_middleware
+from ..logging.logger import GCCLogger
 
 
 def create_app(config: GCCConfig | None = None) -> FastAPI:
@@ -22,6 +26,14 @@ def create_app(config: GCCConfig | None = None) -> FastAPI:
     """
     if config is None:
         config = get_config()
+
+    # Initialize logging system
+    log_dir = Path(os.environ.get("GCC_LOG_DIR", config.logging.log_dir))
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Get logger for app initialization
+    logger = GCCLogger.get_logger("gcc.app", log_dir, config.server.log_level)
+    logger.info(f"Initializing GCC server (log directory: {log_dir})")
 
     # Create FastAPI app
     app = FastAPI(
@@ -48,6 +60,7 @@ def create_app(config: GCCConfig | None = None) -> FastAPI:
         """
         return {"status": "ok", "version": "1.0.0"}
 
+    logger.info("GCC server initialized successfully")
     return app
 
 
