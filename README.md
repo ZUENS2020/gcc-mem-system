@@ -62,17 +62,17 @@ GCC provides a **git-like memory system** that makes this possible!
 
 ```
 
-                    GCC Context Controller                    
+              GCC Context Controller
 
-                                                              
-  📝 Initialize    →  Set project goals & todos              
-  🌿 Branch        →  Create isolated work contexts          
-  💾 Commit        →  Save progress checkpoints              
-  📖 Context       →  Retrieve structured memory             
-  🔀 Merge         →  Combine branch contexts                
-  📊 Log           →  Record detailed action logs            
-  🔍 Diff          →  Compare memory versions                
-                                                              
+
+  📝 Initialize    →  Set project goals & todos
+  🌿 Branch        →  Create isolated work contexts
+  💾 Commit        →  Save progress checkpoints
+  📖 Context       →  Retrieve structured memory
+  🔀 Merge         →  Combine branch contexts
+  📊 Log           →  Record detailed action logs
+  🔍 Diff          →  Compare memory versions
+
 
 ```
 
