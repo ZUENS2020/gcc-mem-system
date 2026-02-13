@@ -42,14 +42,30 @@ Call gcc_init with:
 - goal: "Build REST API for user authentication"
 - todo: [Design database schema, Implement JWT auth, Add rate limiting, Write tests]
 
-THEN:
-Store the returned session_id locally for this conversation.
+THEN (CRITICAL):
+Store the returned session_id in .claude/session.id file:
 Example response: {"session": "rest-api-auth-2025", ...}
-YOU MUST REMEMBER: "Current session ID is rest-api-auth-2025"
+
+You MUST:
+1. Create file: .claude/session.id
+2. Write ONLY the session_id value to it: "rest-api-auth-2025"
+3. Confirm storage: "✅ Stored session ID: rest-api-auth-2025 in .claude/session.id"
+
+This provides:
+- Persistent storage across conversation interruptions
+- Easy retrieval when needed
+- Clear workspace identification for all tools
 ```
 
-**CRITICAL: Always store and remember the session_id from initialization.**
-This is your persistent workspace identifier for ALL subsequent tool calls.
+**CRITICAL: The session_id MUST be stored in .claude/session.id file.**
+This is your ONLY persistent workspace identifier for ALL subsequent tool calls.
+
+**PERSISTENCE MECHANISM:**
+- Storage location: `.claude/session.id` (in project root)
+- Content: ONLY the session_id string (e.g., "rest-api-auth-2025")
+- Purpose: Workspace identification for all GCC tool calls
+- Retrieval: Read this file when needing session_id
+- Duration: Persists until you overwrite with new initialization
 
 **NEVER skip this step** - it establishes the persistent memory foundation.
 
@@ -204,7 +220,8 @@ AI: [Calls gcc_init]
   ✅ "Initialized session 'rest-api-2025'"
   ✅ "Set goal: Build REST API with authentication"
   ✅ "Set TODO: [Design schema, Choose auth method, Implement auth, Add tests]"
-  ✅ **STORED: Current session ID is 'rest-api-2025'**
+  ✅ **Writing session ID to .claude/session.id**
+  ✅ **✅ Stored session ID: rest-api-2025 in .claude/session.id**
 
 [Calls gcc_branch]
   ✅ "Created branch 'oauth-experiment'"
@@ -212,7 +229,7 @@ AI: [Calls gcc_init]
 
 AI: "I'll explore OAuth2 in the oauth-experiment branch.
   This keeps our main approach stable.
-  Working in session: rest-api-2025"
+  Working in session: rest-api-2025 (read from .claude/session.id)"
 
 [Work happens with OTA logging]
   ✅ [gcc_log] "Observed: OAuth callback needs redirect URI"
@@ -350,11 +367,15 @@ GOOD: [Calls gcc_commit] "Recording this completed work..."
 
 ## Key Principles
 
-0. **ALWAYS store and remember session_id after initialization**
-   - Session ID from gcc_init is your persistent workspace identifier
-   - ALL subsequent tool calls need this session_id
+0. **ALWAYS store session_id in .claude/session.id after initialization**
+   - Session ID from gcc_init is your ONLY persistent workspace identifier
+   - Storage location: `.claude/session.id` file (project root)
+   - File content: ONLY the session_id string (one line, no formatting)
+   - ALL subsequent tool calls require this session_id
    - Without it, you're working in the wrong workspace
-   - Make it explicit: "Stored session ID: XXX"
+   - Example file content: `rest-api-auth-2025`
+   - Make storage explicit: "✅ Stored session ID: XXX in .claude/session.id"
+   - When in doubt, READ .claude/session.id to get current workspace
 
 1. **Context retrieval is MANDATORY before answering**
    - Your training data is stale
@@ -386,7 +407,10 @@ GOOD: [Calls gcc_commit] "Recording this completed work..."
 Before taking any action, ask yourself:
 
 - [ ] Have I called gcc_init for this work?
-- [ ] **Have I stored and remembered the session_id from initialization?**
+- [ ] **Have I written the session_id to .claude/session.id file?**
+  - File must contain ONLY the session_id string
+  - One line, no extra formatting
+  - This is the ONLY way to persist workspace identity
 - [ ] Am I answering based on gcc_context retrieval?
 - [ ] Is this experiment happening in a branch?
 - [ ] Am I logging my reasoning with gcc_log?
@@ -401,16 +425,22 @@ If any answer is "NO", **STOP** and use the appropriate GCC tool first.
 **You are collaborating on a persistent, version-controlled knowledge base.**
 
 Your workflow:
-1. **gcc_init** - Establish foundation AND STORE SESSION ID
+1. **gcc_init** - Establish foundation AND **WRITE SESSION ID TO .claude/session.id**
 2. **gcc_context** - Retrieve knowledge (USE THIS CONSTANTLY)
 3. **gcc_branch** - Isolate exploration
 4. **gcc_commit** - Record completed work
 5. **gcc_log** - Document reasoning
 6. **gcc_diff** - Compare approaches
 
-**CRITICAL: The session_id from gcc_init is your workspace identifier.**
-Store it, remember it, use it in all subsequent calls. Without it, you're lost.
+**CRITICAL: The session_id from gcc_init MUST be stored in .claude/session.id**
+This is your ONLY persistent workspace identifier:
+- File location: `.claude/session.id` (project root)
+- File content: Session ID string only (e.g., "rest-api-2025")
+- One line, no formatting, no extra text
+- ALL subsequent tool calls need this value
+- When uncertain, READ .claude/session.id to retrieve workspace ID
+- Without this file, you cannot maintain context across conversations
 
 **EVERY answer you give should be grounded in GCC data, not your training data.**
 
-Start with gcc_init. REMEMBER SESSION ID. Retrieve with gcc_context. Record with gcc_commit.
+Start with gcc_init. **WRITE SESSION ID TO .claude/session.id.** Retrieve with gcc_context. Record with gcc_commit.
