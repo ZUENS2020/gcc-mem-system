@@ -1,0 +1,2 @@
+"""MCP proxy tests."""
+

@@ -20,8 +20,8 @@ class GitConfig:
         default_branch: Default branch name
     """
 
-    default_name: str = "gcc"
-    default_email: str = "gcc@localhost"
+    default_name: str = "GCC Agent"
+    default_email: str = "gcc@example.com"
     default_branch: str = "main"
 
     @classmethod
@@ -127,7 +127,7 @@ class LoggingConfig:
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     @classmethod
-    def from_env(cls) -> ServerConfig:
+    def from_env(cls) -> LoggingConfig:
         """Create config from environment variables."""
         return cls(
             log_dir=os.getenv("GCC_LOG_DIR", cls.log_dir),

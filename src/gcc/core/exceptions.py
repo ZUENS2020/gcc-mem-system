@@ -107,6 +107,8 @@ class StorageError(GCCError):
         message: str,
         path: str | None = None,
         io_error: str | None = None,
+        details: dict | None = None,
+        **extra_details,
     ) -> None:
         """Initialize a storage error.
 
@@ -114,13 +116,17 @@ class StorageError(GCCError):
             message: Description of the storage error
             path: Path related to the error
             io_error: Underlying I/O error message
+            details: Optional additional details
+            **extra_details: Extra detail keys for callers
         """
-        details = {}
+        merged_details = details.copy() if details else {}
         if path:
-            details["path"] = path
+            merged_details["path"] = path
         if io_error:
-            details["io_error"] = io_error
-        super().__init__(message, details)
+            merged_details["io_error"] = io_error
+        if extra_details:
+            merged_details.update(extra_details)
+        super().__init__(message, merged_details)
 
 
 class BranchNotFoundError(RepositoryError):
@@ -136,10 +142,10 @@ class BranchNotFoundError(RepositoryError):
             branch: Name of the branch that was not found
             available: List of available branch names
         """
-        details = {"branch": branch}
+        super().__init__(f"Branch not found: {branch}")
+        self.details["branch"] = branch
         if available:
-            details["available_branches"] = available
-        super().__init__(f"Branch not found: {branch}", details=details)
+            self.details["available_branches"] = available
 
 
 class SessionNotFoundError(GCCError):

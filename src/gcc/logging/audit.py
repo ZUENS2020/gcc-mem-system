@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -48,7 +48,7 @@ class AuditLogger:
             error: Error message if operation failed
         """
         entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "action": action,
             "session_id": session_id,
             "user": user,

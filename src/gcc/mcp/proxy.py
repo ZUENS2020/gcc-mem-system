@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
+import hashlib
+from pathlib import Path
 from typing import Any, Dict
 
 import httpx
@@ -14,14 +17,22 @@ import httpx
 
 # Windows encoding fix - important for non-ASCII characters
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stdin, "reconfigure"):
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
 
 
 # Configuration
 SERVER_URL_ENV = "GCC_SERVER_URL"
 SESSION_ID_ENV = "GCC_SESSION_ID"
+SESSION_MODE_ENV = "GCC_SESSION_MODE"
+SESSION_LOCK_MODE_ENV = "GCC_SESSION_LOCK_MODE"
+SESSION_NAMESPACE_ENV = "GCC_SESSION_NAMESPACE"
+SESSION_ID_FILE_ENV = "GCC_SESSION_ID_FILE"
 DEFAULT_SERVER_URL = "http://localhost:8000"
+DEFAULT_SESSION_MODE = "auto"
+DEFAULT_LOCK_MODE = "env"
 DEFAULT_SESSION_ID = None
 
 COMMIT_PROMPT_GUIDE = (
@@ -182,13 +193,133 @@ def _server_url() -> str:
     return os.environ.get(SERVER_URL_ENV, DEFAULT_SERVER_URL).rstrip("/")
 
 
+def _sanitize_session_part(value: str) -> str:
+    """Sanitize a string for safe use in session IDs."""
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip())
+    cleaned = cleaned.strip("-_")
+    return cleaned
+
+
+def _session_namespace() -> str:
+    """Get optional session namespace prefix."""
+    namespace = os.environ.get(SESSION_NAMESPACE_ENV, "").strip()
+    if not namespace:
+        return ""
+    return _sanitize_session_part(namespace)[:24]
+
+
+def _with_namespace(session_id: str) -> str:
+    """Apply optional namespace prefix to generated session ID."""
+    namespace = _session_namespace()
+    if not namespace:
+        return session_id
+    return f"{namespace}-{session_id}"
+
+
+def _container_host_id() -> str:
+    """Get stable short identifier for current container host."""
+    hostname = os.environ.get("HOSTNAME", "")
+    if hostname:
+        return _sanitize_session_part(hostname)[:12]
+    return "unknown"
+
+
+def _running_in_docker() -> bool:
+    """Detect whether current process is running in Docker."""
+    hostname = os.environ.get("HOSTNAME", "")
+    if hostname and len(hostname) >= 12:
+        return True
+    return Path("/.dockerenv").exists()
+
+
+def _workspace_hash() -> str:
+    """Get short stable hash for current workspace path."""
+    workspace = str(Path.cwd().resolve())
+    digest = hashlib.sha1(workspace.encode("utf-8")).hexdigest()[:12]
+    return digest
+
+
+def _session_mode() -> str:
+    """Get session mode.
+
+    Supported values:
+    - auto: defaults to shared session IDs across environments
+    - shared: deterministic ID per container/workspace
+    - isolated: per-process ID
+    """
+    mode = os.environ.get(SESSION_MODE_ENV, DEFAULT_SESSION_MODE).strip().lower()
+    if mode in ("auto", "shared", "isolated"):
+        return mode
+    return DEFAULT_SESSION_MODE
+
+
+def _lock_mode() -> str:
+    """Get session lock mode.
+
+    Supported values:
+    - env: lock only when GCC_SESSION_ID is explicitly configured
+    - strict: lock in env-fixed mode and docker mode (legacy compatible)
+    - none: never lock
+    """
+    mode = os.environ.get(SESSION_LOCK_MODE_ENV, DEFAULT_LOCK_MODE).strip().lower()
+    if mode in ("env", "strict", "none"):
+        return mode
+    return DEFAULT_LOCK_MODE
+
+
+def _session_id_from_file() -> str | None:
+    """Read session ID from configured file if available and valid."""
+    file_path = os.environ.get(SESSION_ID_FILE_ENV)
+    if not file_path:
+        return None
+
+    path = Path(file_path)
+    if not path.exists() or not path.is_file():
+        return None
+
+    try:
+        value = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+
+    if not value:
+        return None
+
+    # Keep same session-id character policy as server-side storage validator.
+    if re.match(r"^[A-Za-z0-9_-]+$", value):
+        return value
+    return None
+
+
+def _generated_session_id() -> str:
+    """Generate a default session ID from configured mode."""
+    mode = _session_mode()
+    in_docker = _running_in_docker()
+
+    if mode == "auto":
+        mode = "shared"
+
+    if mode == "shared":
+        if in_docker:
+            base = f"container-{_container_host_id()}"
+        else:
+            base = f"ws-{_workspace_hash()}"
+    else:
+        if in_docker:
+            base = f"container-{_container_host_id()}-p{os.getpid()}"
+        else:
+            base = f"mcp-{os.getpid()}"
+
+    return _with_namespace(base)
+
+
 def _default_session_id() -> str:
     """Get or generate default session ID.
 
     Priority:
     1. GCC_SESSION_ID environment variable
-    2. Container hostname (Docker)
-    3. Process ID
+    2. GCC_SESSION_ID_FILE contents (if configured and valid)
+    3. Generated default from GCC_SESSION_MODE
 
     Returns:
         Session ID string
@@ -200,51 +331,41 @@ def _default_session_id() -> str:
     if env_value:
         return env_value
 
-    # Priority 2: Try container ID from hostname
-    try:
-        hostname = os.environ.get("HOSTNAME", "")
-        if hostname and len(hostname) >= 12:
-            if DEFAULT_SESSION_ID is None:
-                DEFAULT_SESSION_ID = f"container-{hostname[:12]}"
-            return DEFAULT_SESSION_ID
-    except Exception:
-        pass
+    # Priority 2: Configured session-id file
+    file_value = _session_id_from_file()
+    if file_value:
+        return file_value
 
-    # Priority 3: Fallback to process ID
+    # Priority 3: Generated default
     if DEFAULT_SESSION_ID is None:
-        DEFAULT_SESSION_ID = f"mcp-{os.getpid()}"
+        DEFAULT_SESSION_ID = _generated_session_id()
     return DEFAULT_SESSION_ID
 
 
 def _is_session_locked() -> bool:
     """Check if session_id is locked to configured value.
 
-    Returns True if:
-    - GCC_SESSION_ID environment variable is set, OR
-    - Running in Docker with valid HOSTNAME
-
-    This prevents AI from overriding configured session IDs.
+    Lock behavior is controlled by GCC_SESSION_LOCK_MODE:
+    - env (default): lock only when GCC_SESSION_ID is set
+    - strict: lock when GCC_SESSION_ID is set or running in Docker
+    - none: never lock
 
     Returns:
         True if session is locked and should use configured value only
     """
-    # Check explicit environment variable
-    if os.environ.get(SESSION_ID_ENV):
-        return True
-
-    # Check Docker environment
-    hostname = os.environ.get("HOSTNAME", "")
-    if hostname and len(hostname) >= 12:
-        return True
-
-    return False
+    mode = _lock_mode()
+    if mode == "none":
+        return False
+    if mode == "strict":
+        return bool(os.environ.get(SESSION_ID_ENV)) or _running_in_docker()
+    return bool(os.environ.get(SESSION_ID_ENV))
 
 
 def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Ensure session_id is set in arguments.
 
-    If session is locked (via env var or Docker), ignores AI-provided session_id.
-    Otherwise, uses AI-provided value or generates default.
+    If session is locked (see GCC_SESSION_LOCK_MODE), ignores AI-provided session_id.
+    Otherwise, keeps AI-provided value and only fills missing session_id.
 
     Args:
         arguments: Tool arguments dictionary
@@ -254,7 +375,7 @@ def _ensure_session_id(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """
     arguments = dict(arguments)
 
-    # If locked, always use configured value (ignore AI input)
+    # If locked, always use configured/default value (ignore tool input)
     if _is_session_locked():
         arguments["session_id"] = _default_session_id()
     elif "session_id" not in arguments or not arguments.get("session_id"):
@@ -322,12 +443,17 @@ def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, A
         server_url = _server_url()
         session_env = os.environ.get(SESSION_ID_ENV, "not set")
         hostname_env = os.environ.get("HOSTNAME", "not set")
+        session_mode = os.environ.get(SESSION_MODE_ENV, DEFAULT_SESSION_MODE)
+        lock_mode = os.environ.get(SESSION_LOCK_MODE_ENV, DEFAULT_LOCK_MODE)
+        session_file = os.environ.get(SESSION_ID_FILE_ENV, "not set")
 
         raise ConnectionError(
             f"Failed to connect to GCC server at {server_url}. "
             f"Please ensure the server is running. "
             f"Environment: GCC_SERVER_URL={os.environ.get(SERVER_URL_ENV, 'default')}, "
-            f"GCC_SESSION_ID={session_env}, HOSTNAME={hostname_env}"
+            f"GCC_SESSION_ID={session_env}, HOSTNAME={hostname_env}, "
+            f"GCC_SESSION_MODE={session_mode}, GCC_SESSION_LOCK_MODE={lock_mode}, "
+            f"GCC_SESSION_ID_FILE={session_file}"
         ) from exc
 
 

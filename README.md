@@ -43,18 +43,22 @@ GCC is a unified memory and context management system for AI agents. It leverage
 
 #### Directory Structure
 
-Each session stores its data in a dedicated directory:
+Each session stores its data under the shared data root:
 
 ```
-/data/sessions/{session_id}/.GCC/
-├── main.md              # Session goals and roadmap
-├── branches/            # Branch-specific memory
-│   └── {branch_name}/
-│       ├── commit.md     # Contribution checkpoints
-│       ├── log.md       # Detailed logs
-│       └── metadata.yaml # Structured metadata
-└── .git/               # Version control
+/data/.GCC/
+├── sessions/
+│   └── {session_id}/
+│       ├── main.md        # Session goals and roadmap
+│       └── branches/      # Branch-specific memory
+│           └── {branch_name}/
+│               ├── commit.md
+│               ├── log.md
+│               └── metadata.yaml
+└── .git/                 # Version control for GCC memory state
 ```
+
+Breaking change: legacy duplicated path layouts are no longer used. You should clear old data before upgrading.
 
 #### Sessions
 A session is an isolated workspace. All data for a session is stored in its own directory with a dedicated Git repository. Use `session_id` to identify which workspace to operate on.
@@ -86,6 +90,7 @@ The server starts with automatic path management. AI clients only need to provid
 #### Local Installation
 ```bash
 pip install -e .
+export GCC_DATA_ROOT=/data   # Optional override (default: /data)
 gcc-server  # Start API server
 # OR
 gcc-mcp     # Start MCP proxy (via stdin/stdout)
@@ -94,6 +99,8 @@ gcc-mcp     # Start MCP proxy (via stdin/stdout)
 ### Configuration
 
 GCC can be configured through environment variables. Most have sensible defaults and should not need adjustment for typical use.
+
+`GCC_DATA_ROOT` is optional for server-side path resolution. If omitted, GCC uses the default path `/data`.
 
 #### Server Configuration
 
@@ -143,7 +150,11 @@ GCC can be configured through environment variables. Most have sensible defaults
 | Variable | Description | Default |
 | :--- | :--- | :--- |
 | `GCC_SERVER_URL` | HTTP API server URL for MCP proxy | `http://localhost:8000` |
-| `GCC_SESSION_ID` | Default session ID for MCP requests | Auto-generated |
+| `GCC_SESSION_ID` | Fixed session ID for MCP requests (highest priority) | unset |
+| `GCC_SESSION_MODE` | Default session strategy: `auto`, `shared`, `isolated` | `auto` |
+| `GCC_SESSION_LOCK_MODE` | Session lock policy: `env`, `strict`, `none` | `env` |
+| `GCC_SESSION_NAMESPACE` | Optional prefix for generated session IDs | unset |
+| `GCC_SESSION_ID_FILE` | Optional file path to load a default session ID | unset |
 
 **Example - Docker Compose with custom configuration:**
 ```yaml
@@ -153,40 +164,47 @@ services:
     environment:
       - GCC_DATA_ROOT=/data
       - GCC_PORT=8000
-      -GCC_LOG_LEVEL=debug
+      - GCC_LOG_LEVEL=debug
       - GCC_GIT_NAME=My AI Agent
       - GCC_GIT_EMAIL=agent@example.com
     volumes:
       - ./data:/data
 ```
 
-#### Session Locking
+#### Session Strategy and Locking
 
-When `session_id` is configured via environment variable or Docker container ID, GCC automatically **locks** the session to prevent AI agents from accidentally overriding it.
+GCC MCP resolves `session_id` with this priority:
+1. Tool argument `session_id` (if lock policy allows)
+2. `GCC_SESSION_ID` environment variable
+3. `GCC_SESSION_ID_FILE` value (if configured and valid)
+4. Generated default from `GCC_SESSION_MODE`
 
-**Locking Conditions:**
-- `GCC_SESSION_ID` environment variable is set, OR
-- Running in Docker with a valid `HOSTNAME` (length ≥ 12)
+`GCC_SESSION_MODE` behavior:
+- `auto` (default):
+  - Docker: shared per container (`container-<host>`)
+  - Non-Docker: shared per workspace (`ws-<hash>`)
+- `shared`: deterministic shared default (`container-<host>` or `ws-<hash>`)
+- `isolated`: per-process default (`container-<host>-p<pid>` or `mcp-<pid>`)
 
-**When Locked:**
-- AI-provided `session_id` parameters in tool calls are **ignored**
-- Only the configured value is used
-- Ensures production and container environments maintain session isolation
-
-**When Unlocked (Local Development):**
-- No `GCC_SESSION_ID` set, no Docker hostname
-- AI agents can freely specify `session_id` in tool calls
-- Falls back to auto-generated `mcp-<pid>` if not provided
+`GCC_SESSION_LOCK_MODE` behavior:
+- `env` (default): lock only when `GCC_SESSION_ID` is explicitly set
+- `strict`: lock in both env-fixed mode and Docker mode (legacy behavior)
+- `none`: never lock, always allow tool-provided `session_id`
 
 **Examples:**
 
-| Environment | Config | Behavior |
+| Scenario | Config | Behavior |
 |:---|:---|:---|
-| **Production** | `GCC_SESSION_ID=prod-2024` | Locked → Ignores AI's `session_id` |
-| **Docker** | `HOSTNAME=abc123def456...` | Locked → Ignores AI's `session_id` |
-| **Local Dev** | No config set | Unlocked → AI can specify `session_id` |
+| Fixed shared memory | `GCC_SESSION_ID=team-main` | All tools use `team-main` |
+| Docker shared memory (same container) | `GCC_SESSION_MODE=auto` | Uses `container-<host>` |
+| Docker concurrent isolated memory | `GCC_SESSION_MODE=isolated` | Each MCP process gets `container-<host>-p<pid>` |
+| Docker forced lock (legacy) | `GCC_SESSION_LOCK_MODE=strict` | Ignores tool `session_id` in Docker |
+| Workspace shared memory | `GCC_SESSION_MODE=shared` | Uses `ws-<hash>` for same workspace |
+| Default from file | `GCC_SESSION_ID_FILE=.claude/session.id` | Uses file value when present |
 
 ### API Reference
+
+Request validation is strict (`extra=forbid` on request models). Unknown fields are rejected with HTTP 422.
 
 | Endpoint | Method | Description | Key Parameters |
 | :--- | :--- | :--- | :--- |
@@ -206,6 +224,15 @@ curl -X POST http://localhost:8000/init \
   }'
 ```
 **Note**: `session_id` is optional and will be auto-generated if not provided.
+
+**Migration note (strict schema):**
+```json
+// Old (rejected now: unknown field "root")
+{"root": "/tmp/work", "goal": "Build a web scraper"}
+
+// New
+{"goal": "Build a web scraper", "session_id": "my-session"}
+```
 
 **Example - Record Memory Checkpoint:**
 ```json
@@ -271,18 +298,22 @@ GCC (Git-Context-Controller) 是一个为 AI 智能体设计的统一内存与�
 
 #### 目录结构
 
-每个会话在其专用目录中存储数据：
+每个会话都存储在共享数据根目录下：
 
 ```
-/data/sessions/{session_id}/.GCC/
-├── main.md              # 会话目标和路线图
-├── branches/            # 分支特定内存
-│   └── {branch_name}/
-│       ├── commit.md     # 贡献检查点
-│       ├── log.md       # 详细日志
-│       └── metadata.yaml # 结构化元数据
-└── .git/               # 版本控制
+/data/.GCC/
+├── sessions/
+│   └── {session_id}/
+│       ├── main.md        # 会话目标和路线图
+│       └── branches/      # 分支特定内存
+│           └── {branch_name}/
+│               ├── commit.md
+│               ├── log.md
+│               └── metadata.yaml
+└── .git/                 # GCC 内存状态的版本控制
 ```
+
+不兼容变更：已移除旧的重复路径布局。升级前请清理旧数据。
 
 #### 会话 (Sessions)
 会话是一个隔离的工作区。会话的所有数据都存储在拥有独立 Git 仓库的目录中。使用 `session_id` 来标识要操作的工作空间。
@@ -314,6 +345,7 @@ make up
 #### 本地安装
 ```bash
 pip install -e .
+export GCC_DATA_ROOT=/data   # 可选覆盖（默认值：/data）
 gcc-server  # 启动 API 服务器
 # 或者
 gcc-mcp     # 启动 MCP 代理（通过 stdin/stdout）
@@ -322,6 +354,8 @@ gcc-mcp     # 启动 MCP 代理（通过 stdin/stdout）
 ### 配置选项
 
 GCC 可以通过环境变量进行配置。大多数变量都有合理的默认值，通常情况下不需要调整。
+
+`GCC_DATA_ROOT` 对服务端路径解析是可选项。未设置时，GCC 默认使用 `/data`。
 
 #### 服务器配置
 
@@ -371,7 +405,11 @@ GCC 可以通过环境变量进行配置。大多数变量都有合理的默认�
 | 变量 | 描述 | 默认值 |
 | :--- | :--- | :--- |
 | `GCC_SERVER_URL` | MCP 代理的 HTTP API 服务器 URL | `http://localhost:8000` |
-| `GCC_SESSION_ID` | MCP 请求的默认会话 ID | 自动生成 |
+| `GCC_SESSION_ID` | MCP 请求的固定会话 ID（最高优先级） | 未设置 |
+| `GCC_SESSION_MODE` | 默认会话策略：`auto`、`shared`、`isolated` | `auto` |
+| `GCC_SESSION_LOCK_MODE` | 会话锁定策略：`env`、`strict`、`none` | `env` |
+| `GCC_SESSION_NAMESPACE` | 生成会话 ID 的可选前缀 | 未设置 |
+| `GCC_SESSION_ID_FILE` | 加载默认会话 ID 的可选文件路径 | 未设置 |
 
 **示例 - Docker Compose 自定义配置：**
 ```yaml
@@ -388,33 +426,40 @@ services:
       - ./data:/data
 ```
 
-#### Session 锁定机制
+#### Session 策略与锁定机制
 
-当通过环境变量或 Docker 容器 ID 配置 `session_id` 时，GCC 会自动**锁定**会话，防止 AI 智能体意外覆盖它。
+GCC MCP 按以下优先级解析 `session_id`：
+1. 工具调用参数中的 `session_id`（前提是锁定策略允许）
+2. 环境变量 `GCC_SESSION_ID`
+3. `GCC_SESSION_ID_FILE` 文件中的值（已配置且合法时）
+4. 基于 `GCC_SESSION_MODE` 生成的默认值
 
-**锁定条件：**
-- 设置了 `GCC_SESSION_ID` 环境变量，或
-- 在 Docker 中运行且 `HOSTNAME` 有效（长度 ≥ 12）
+`GCC_SESSION_MODE` 行为：
+- `auto`（默认）：
+  - Docker：容器内共享（`container-<host>`）
+  - 非 Docker：按工作区共享（`ws-<hash>`）
+- `shared`：确定性的共享默认值（`container-<host>` 或 `ws-<hash>`）
+- `isolated`：按进程默认值（`container-<host>-p<pid>` 或 `mcp-<pid>`）
 
-**锁定时的行为：**
-- AI 在工具调用中提供的 `session_id` 参数将被**忽略**
-- 仅使用配置的值
-- 确保生产和容器环境保持会话隔离
-
-**未锁定时（本地开发）：**
-- 未设置 `GCC_SESSION_ID`，无 Docker 主机名
-- AI 智能体可以在工具调用中自由指定 `session_id`
-- 如未提供，回退到自动生成的 `mcp-<pid>`
+`GCC_SESSION_LOCK_MODE` 行为：
+- `env`（默认）：仅当显式设置 `GCC_SESSION_ID` 时锁定
+- `strict`：在固定环境变量和 Docker 场景都锁定（兼容旧行为）
+- `none`：从不锁定，总是允许工具调用传入 `session_id`
 
 **示例：**
 
-| 环境 | 配置 | 行为 |
+| 场景 | 配置 | 行为 |
 |:---|:---|:---|
-| **生产环境** | `GCC_SESSION_ID=prod-2024` | 锁定 → 忽略 AI 的 `session_id` |
-| **Docker** | `HOSTNAME=abc123def456...` | 锁定 → 忽略 AI 的 `session_id` |
-| **本地开发** | 无配置 | 未锁定 → AI 可指定 `session_id` |
+| 固定共享记忆 | `GCC_SESSION_ID=team-main` | 所有工具都使用 `team-main` |
+| Docker 容器内共享记忆 | `GCC_SESSION_MODE=auto` | 使用 `container-<host>` |
+| Docker 并发隔离记忆 | `GCC_SESSION_MODE=isolated` | 每个 MCP 进程使用 `container-<host>-p<pid>` |
+| Docker 强制锁定（旧行为） | `GCC_SESSION_LOCK_MODE=strict` | 在 Docker 中忽略工具传入的 `session_id` |
+| 工作区共享记忆 | `GCC_SESSION_MODE=shared` | 同一工作区使用 `ws-<hash>` |
+| 从文件读取默认会话 | `GCC_SESSION_ID_FILE=.claude/session.id` | 文件存在时优先使用其值 |
 
 ### API 参考
+
+请求体采用严格校验（`extra=forbid`）。未知字段会被拒绝并返回 HTTP 422。
 
 | 端点 | 方法 | 描述 | 关键参数 |
 | :--- | :--- | :--- | :--- |
@@ -434,6 +479,15 @@ curl -X POST http://localhost:8000/init \
   }'
 ```
 **注意**: `session_id` 是可选的，如果未提供将自动生成。
+
+**迁移说明（严格 schema）：**
+```json
+// 旧写法（现在会被拒绝：未知字段 "root"）
+{"root": "/tmp/work", "goal": "Build a web scraper"}
+
+// 新写法
+{"goal": "Build a web scraper", "session_id": "my-session"}
+```
 
 **示例 - 记录内存检查点：**
 ```json

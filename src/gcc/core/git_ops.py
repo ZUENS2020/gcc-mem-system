@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
 from .exceptions import RepositoryError, ValidationError
@@ -28,8 +28,8 @@ def _get_git_config():
     except Exception:
         # Fallback if config not initialized
         class GitConfig:
-            default_name = "gcc"
-            default_email = "gcc@localhost"
+            default_name = "GCC Agent"
+            default_email = "gcc@example.com"
             default_branch = "main"
         return GitConfig()
 
@@ -59,7 +59,7 @@ def _append_git_log(repo_root: Path, args: List[str], result: subprocess.Complet
         the main operation flow.
     """
     try:
-        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         lines = [
             f"[{timestamp}] git {' '.join(args)}",
             f"exit={result.returncode}",
@@ -243,9 +243,12 @@ def checkout_branch(repo_root: Path, branch: str) -> None:
         RepositoryError: If checkout fails
         ValidationError: If branch name is invalid
     """
-    # Validate branch name
     validated_branch = Validators.validate_branch_name(branch)
-    _run_git(["checkout", "-B", validated_branch], repo_root)
+    existing_branches = _run_git(["branch", "--list", validated_branch], repo_root).stdout.strip()
+    if existing_branches:
+        _run_git(["checkout", validated_branch], repo_root)
+        return
+    _run_git(["checkout", "-b", validated_branch], repo_root)
 
 
 def add_and_commit(repo_root: Path, paths: Iterable[Path], message: str) -> None:

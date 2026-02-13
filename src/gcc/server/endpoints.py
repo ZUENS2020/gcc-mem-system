@@ -8,37 +8,43 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..core import commands
-from ..core.storage import normalize_session_id
 
 
 # Request/Response Models
+DEFAULT_DATA_ROOT = "/data"
 
-class InitRequest(BaseModel):
+class StrictRequestModel(BaseModel):
+    """Base request model that rejects unknown fields."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class InitRequest(StrictRequestModel):
     """Request model for session initialization."""
     goal: Optional[str] = Field(None, description="Session goal", max_length=10000)
     todo: Optional[List[str]] = Field(None, description="Todo items")
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class BranchRequest(BaseModel):
+class BranchRequest(StrictRequestModel):
     """Request model for branch creation."""
     branch: str = Field(..., description="Branch name", max_length=100)
     purpose: str = Field(..., description="Branch purpose", max_length=10000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class LogRequest(BaseModel):
+class LogRequest(StrictRequestModel):
     """Request model for log appending."""
     branch: str = Field(..., description="Branch name", max_length=100)
     entries: List[str] = Field(..., description="Log entries to append")
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class CommitRequest(BaseModel):
+class CommitRequest(StrictRequestModel):
     """Request model for commit creation."""
     branch: str = Field(..., description="Branch name", max_length=100)
     contribution: str = Field(..., description="Commit contribution", min_length=1, max_length=10000)
@@ -49,7 +55,7 @@ class CommitRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class MergeRequest(BaseModel):
+class MergeRequest(StrictRequestModel):
     """Request model for branch merging."""
     source_branch: str = Field(..., description="Source branch name", max_length=100)
     target_branch: Optional[str] = Field(None, description="Target branch name", max_length=100)
@@ -57,7 +63,7 @@ class MergeRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class ContextRequest(BaseModel):
+class ContextRequest(StrictRequestModel):
     """Request model for context retrieval."""
     branch: Optional[str] = Field(None, description="Branch name", max_length=100)
     commit_id: Optional[str] = Field(None, description="Commit ID", max_length=100)
@@ -66,27 +72,27 @@ class ContextRequest(BaseModel):
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class HistoryRequest(BaseModel):
+class HistoryRequest(StrictRequestModel):
     """Request model for history retrieval."""
     limit: int = Field(20, description="Maximum commits to return", ge=1, le=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class DiffRequest(BaseModel):
+class DiffRequest(StrictRequestModel):
     """Request model for diff retrieval."""
     from_ref: str = Field(..., description="Source ref", max_length=1000)
     to_ref: Optional[str] = Field(None, description="Target ref", max_length=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class ShowRequest(BaseModel):
+class ShowRequest(StrictRequestModel):
     """Request model for file content retrieval."""
     ref: str = Field(..., description="Git ref", max_length=1000)
     path: Optional[str] = Field(None, description="File path", max_length=1000)
     session_id: Optional[str] = Field(None, description="Session identifier", max_length=100)
 
 
-class ResetRequest(BaseModel):
+class ResetRequest(StrictRequestModel):
     """Request model for repository reset."""
     ref: str = Field(..., description="Git ref to reset to", max_length=1000)
     mode: str = Field("soft", description="Reset mode (soft/hard)")
@@ -100,37 +106,24 @@ def _resolve_path(session_id: Optional[str]) -> Path:
     """Resolve and validate project root path.
 
     Args:
-        session_id: Session identifier (auto-generated if None)
+        session_id: Session identifier (unused here, kept for call compatibility)
 
     Returns:
-        Resolved Path object
+        Data root path used by storage layer
 
     Raises:
-        HTTPException: If path resolution fails
+        ValidationError: If resolved path is unsafe
 
     Note:
-        - Container mode: /data/sessions/{session_id}/
-        - All paths are auto-managed based on session_id
+        - Container mode data root defaults to /data
+        - Session-specific layout is handled by storage layer
     """
     from ..core.validators import Validators
 
-    base = os.environ.get("GCC_DATA_ROOT")
-    if not base:
-        # Not in container mode - should not happen in production
-        raise HTTPException(
-            status_code=500,
-            detail="GCC must run in container mode with GCC_DATA_ROOT set"
-        )
-
-    # Container mode: use sessions subdirectory for organization
-    normalized_session = normalize_session_id(session_id)
+    base = os.environ.get("GCC_DATA_ROOT", DEFAULT_DATA_ROOT)
     base_path = Path(base).resolve()
-    # Use /data/sessions/{session_id}/ structure
-    session_path = (base_path / "sessions" / normalized_session).resolve()
-    # Verify path is within base/sessions
-    sessions_root = (base_path / "sessions").resolve()
-    Validators.validate_path_safe(str(session_path), sessions_root)
-    return session_path
+    Validators.validate_path_safe(str(base_path), base_path)
+    return base_path
 
 
 # API Router
