@@ -1,705 +1,396 @@
-# Git Context Controller (GCC) - Claude Code Setup Guide
+# Instructions for Claude (and other AI assistants)
 
-Based on: "Git Context Controller: Manage the Context of LLM-based Agents like Git" (Wu et al., 2025)
+## MANDATORY: Use GCC Memory System
 
-## Overview
+You **MUST** use the GCC (Git-Context-Controller) MCP tools to manage all memory, context, and project information in this conversation.
 
-**GCC (Git-Context-Controller)** is a unified memory and context management system for AI agents. It leverages Git as a version-controlled backend to provide a **persistent, structured, and auditable** history of an agent's activities.
+### Critical Rules
 
-### Key Innovation
-
-GCC treats **agent context as code**:
-- Every context change becomes a Git commit
-- Full audit trail with diff capabilities
-- Structured memory at multiple granularities
-- Branch-based exploration without pollution
+1. **ALWAYS initialize a session with `gcc_init` when starting new work**
+2. **NEVER rely on your context window** - use `gcc_context` to retrieve information
+3. **COMMIT all meaningful work with `gcc_commit`** - don't let contributions be lost
+4. **LOG your reasoning with `gcc_log`** using the OTA pattern (Observation-Thinking-Action)
+5. **USE BRANCHES for exploration** - don't pollute main with experiments
+6. **RETRIEVE context at right granularity** - overview, branch, commit, or log level
 
 ### Why This Matters
 
-**Traditional LLM limitations:**
-- ❌ Context windows overflow and get truncated
-- ❌ No persistent memory across sessions
-- ❌ Cannot track what changed over time
-- ❌ No structured knowledge representation
+Your context window is **ephemeral and limited**. GCC provides:
+- ✅ **Persistent memory** across entire conversation (and beyond)
+- ✅ **Structured knowledge** at multiple granularities
+- ✅ **Full audit trail** with diffs and history
+- ✅ **Isolated exploration** via branches
 
-**GCC solves these:**
-- ✅ Persistent Git-based storage (unlimited size)
-- ✅ Session-based isolation and continuity
-- ✅ Full commit history with diffs
-- ✅ Structured: Roadmap → Branches → Commits → Logs
+### Consequences of Not Using GCC
 
-## Quick Start
+- ❌ Context will be **lost** when it overflows
+- ❌ No **persistent knowledge** across conversation
+- ❌ Cannot **review or recall** what happened earlier
+- ❌ No **structured representation** of project state
 
-### 1. Install GCC
+## How to Use GCC Tools
 
-```bash
-# Using Docker (recommended)
-docker-compose up -d
+### 1. Initialize Projects (MANDATORY at start)
 
-# OR locally
-pip install -e .
-gcc-server  # Start API server
-```
-
-### 2. Configure Claude Desktop
-
-Add to your Claude Desktop config:
-
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Linux**: `~/.config/Claude/claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "gcc": {
-      "command": "gcc-mcp",
-      "env": {
-        "GCC_SERVER_URL": "http://localhost:8000"
-      }
-    }
-  }
-}
-```
-
-Restart Claude Desktop.
-
-## System Architecture
-
-### Memory Hierarchy
-
-GCC organizes agent memory in a **hierarchical structure**:
+When user describes a new project or work area:
 
 ```
-Session (Isolated Workspace)
-│
-├── main.md                 # Global roadmap, goals, TODO
-│   └── High-level project direction
-│
-└── Branches (Exploration Spaces)
-    │
-    └── Branch Name
-        ├── commit.md           # Structured contribution checkpoints
-        │   └── "What was accomplished" summaries
-        │
-        ├── log.md              # Fine-grained execution logs (OTA)
-        │   └── "Observation-Thinking-Action" entries
-        │
-        └── metadata.yaml        # Structured state storage
-            └── Key-value pairs for environment info
+User: "I need to build a REST API for user authentication"
+
+YOU MUST (first thing):
+Call gcc_init with:
+- goal: "Build REST API for user authentication"
+- todo: [Design database schema, Implement JWT auth, Add rate limiting, Write tests]
 ```
 
-### Context Retrieval Granularities
+**NEVER skip this step** - it establishes the persistent memory foundation.
 
-GCC enables **multi-granularity context retrieval**:
+### 2. Retrieve Context Before Answering
 
-| Granularity | Tool | Use Case |
+Before answering questions or making suggestions:
+
+```
+User: "What's the current status of the authentication feature?"
+
+YOU MUST:
+Call gcc_context() to retrieve current state
+- No parameters → Gets project overview (main.md)
+- branch="feature-name" → Gets branch summary
+- log_tail=10 → Gets recent detailed activity
+
+THEN answer based on retrieved context, NOT from your training data or context window.
+```
+
+### 3. Use Branches for Exploration
+
+When user wants to try different approaches:
+
+```
+User: "Let's experiment with OAuth2 instead of JWT"
+
+YOU MUST:
+Call gcc_branch with:
+- branch: "oauth-experiment"
+- purpose: "Testing OAuth2 for better third-party integration"
+
+Work happens in isolated branch space.
+Main remains stable and untouched.
+```
+
+**NEVER experiment directly on main** - always use branches for exploration.
+
+### 4. Log Your Reasoning (OTA Pattern)
+
+As you work, log observations, reasoning, and actions:
+
+```
+User: "I'm getting 403 errors on the login endpoint"
+
+YOU MUST (as you debug):
+Call gcc_log with entries like:
+- "Observed: Login endpoint returning 403 errors"
+- "Thought: Token refresh mechanism might be broken"
+- "Action: Debugging refresh token logic in auth.py"
+- "Observed: Found issue - token expiry not being checked"
+- "Action: Adding expiry validation before refresh"
+```
+
+This creates **traceable reasoning chains** for debugging and future reference.
+
+### 5. Commit Meaningful Checkpoints
+
+When you complete a meaningful unit of work:
+
+```
+User: "I've finished implementing the OAuth login flow"
+
+YOU MUST:
+Call gcc_commit with:
+- branch: "oauth-experiment"
+- contribution: "Implemented OAuth2 login with Google social login"
+- log_entries: ["Integrated google-auth-library", "Set up OAuth callback endpoint", "Added user profile synchronization"]
+- metadata_updates: {"auth_methods": ["jwt", "google-oauth"], "oauth_status": "testing"}
+```
+
+**NEVER let completed work be unrecorded** - commits create permanent knowledge.
+
+### 6. Retrieve Context at Right Granularity
+
+Different questions need different retrieval granularities:
+
+| User Question Type | What YOU Call | Parameters |
 |:---|:---|:---|
-| **Project Overview** | `gcc_context()` | "What's this project about?" |
-| **Branch Summary** | `gcc_context(branch="name")` | "What's the status of feature X?" |
-| **Commit Detail** | `gcc_context(branch="X", commit_id="abc")` | "What did we do in checkpoint 3?" |
-| **Execution Log** | `gcc_context(branch="X", log_tail=10)` | "Show me last 10 observations" |
-| **Metadata Segment** | `gcc_context(metadata_segment="status")` | "What's the current progress?" |
+| "What's this project about?" | `gcc_context()` | None (overview) |
+| "What's happening on feature X?" | `gcc_context()` | `branch="feature-x"` |
+| "What did we do in commit 3?" | `gcc_context()` | `branch="feature-x", commit_id="abc"` |
+| "Show me recent detailed work" | `gcc_context()` | `log_tail=10` |
+| "What's our test coverage?" | `gcc_context()` | `metadata_segment="test_coverage"` |
 
-### OTA Pattern
+**MATCH retrieval granularity to question** - don't use overview for commit-specific questions.
 
-GCC uses the **Observation-Thinking-Action (OTA)** pattern for fine-grained logging:
+### 7. Compare Approaches Before Deciding
 
-```yaml
-# log.md example
-- Observed: User authentication is failing with 403 errors
-- Thought: Token refresh mechanism might be broken
-- Action: Debugging refresh token logic in auth.py
-- Observed: Found issue - token expiry not checked
-- Action: Adding expiry validation before refresh
+When choosing between alternatives:
+
+```
+User: "Should we use the OAuth approach or stay with JWT?"
+
+YOU MUST:
+Call gcc_history for both branches to understand evolution
+Call gcc_diff to compare the implementations
+Provide data-driven recommendation based on actual differences
 ```
 
-This creates **traceable reasoning chains** for debugging and analysis.
+**NEVER guess or rely on general knowledge** - use actual project history.
 
-## Core Concepts
-
-### 1. Sessions (Workspaces)
-
-A **session** is an isolated workspace with its own Git repository. Use sessions for:
-- Different projects or clients
-- Separate experimentation spaces
-- Multi-tenant isolation
-
-**Directory Structure:**
-```
-/data/sessions/{session_id}/.GCC/
-├── main.md              # Session goals and roadmap
-├── branches/            # Branch-specific memory
-│   └── {branch_name}/
-│       ├── commit.md     # Contribution checkpoints
-│       ├── log.md       # Detailed logs
-│       └── metadata.yaml # Structured metadata
-└── .git/               # Version control backend
-```
-
-### 2. Branches (Exploration)
-
-Within a session, **branches** enable isolated exploration:
-- Try different approaches without polluting main
-- Experiment with alternative algorithms
-- Parallel development paths
-- Easy comparison via `gcc_diff`
-
-**Branch Isolation:**
-```
-main/          → Stable, production-ready approach
-├── oauth-exp/    → Exploring OAuth2 authentication
-└── selenim/     → Experimenting with browser automation
-```
-
-### 3. Checkpoints (Structured Memory)
-
-**commit.md** stores **structured contribution summaries**:
-```markdown
-# Contribution Checkpoints
-
-## [Commit Hash] Implementing User Authentication
-**Contribution**: Added JWT-based authentication with refresh token support
-**Metadata**: {"status": "in-progress", "coverage": "65%"}
-
-## [Commit Hash] OAuth2 Integration Complete
-**Contribution**: Migrated from JWT to OAuth2 for third-party integration
-**Metadata**: {"status": "completed", "coverage": "85%"}
-```
-
-### 4. Metadata (Structured State)
-
-**metadata.yaml** provides **queryable structured state**:
-```yaml
-status: "in-progress"
-test_coverage: 78
-last_reviewed: "2025-02-13"
-dependencies:
-  - fastapi
-  - pydantic
-known_issues:
-  - Rate limiting not implemented
-```
-
-Enables context retrieval like:
-- "What's the current status?" → `metadata.status`
-- "What's our test coverage?" → `metadata.test_coverage`
-
-## Usage Scenarios
-
-### Scenario 1: Project Initialization
-
-**User Prompt:**
-```
-Start a GCC session for building a REST API with authentication.
-Goals: [Design database schema, Implement JWT auth, Add rate limiting]
-```
-
-**What Happens:**
-1. Claude calls `gcc_init` with your goal and TODO
-2. GCC creates isolated workspace with Git repo
-3. Sets up `main.md` with project roadmap
-4. Every subsequent action tracked in this session
-
-**Result:**
-```json
-{
-  "gcc_root": "/data/sessions/rest-api-auth/.GCC",
-  "session": "rest-api-auth",
-  "main": ".../main.md"
-}
-```
-
-### Scenario 2: Exploratory Development
-
-**User Prompt:**
-```
-Create a branch "oauth-experiment" to test OAuth2 instead of JWT.
-Document purpose: "Testing OAuth2 for better third-party integration"
-```
-
-**What Happens:**
-1. Claude calls `gcc_branch` to create isolated space
-2. Branch has its own `commit.md`, `log.md`, `metadata.yaml`
-3. Main branch remains stable and untouched
-4. Can compare approaches later with `gcc_diff`
-
-**Benefits:**
-- ✅ Experiment freely without breaking main
-- ✅ Easy to rollback or discard
-- ✅ Clear audit trail of experiments
-
-### Scenario 3: Fine-Grained Progress Tracking
-
-**User Prompt:**
-```
-As you work on the authentication feature, log your observations and decisions.
-```
-
-**What Happens:**
-1. Claude uses `gcc_log` for granular OTA entries:
-   ```
-   - Observed: auth.py returning 403 errors
-   - Thought: Token refresh might be broken
-   - Action: Debugging refresh logic
-   ```
-
-2. Uses `gcc_commit` for meaningful checkpoints:
-   ```
-   Contribution: "Fixed token refresh validation"
-   Log entries: [...]
-   Metadata: {"auth_status": "working"}
-   ```
-
-**Result:**
-- Full audit trail from problem → diagnosis → solution
-- Can review "Why did we make this decision?"
-- Easy to understand months later
-
-### Scenario 4: Context Retrieval
-
-**User:**
-```
-What's the current project status?
-```
-
-**Claude:**
-```
-Retrieving overview...
-📋 main.md:
-  Goal: Build REST API with authentication
-  TODO: [✓ Database design, ✓ JWT auth, Rate limiting]
-
-📊 Recent activity:
-  Branch: oauth-exp
-  Status: Testing Google OAuth integration
-  Latest: "Fixed redirect URI mismatch"
-```
-
-**User:**
-```
-Show me the last 5 log entries from the oauth experiment.
-```
-
-**Claude:**
-```
-Retrieving fine-grained logs...
-1. Observed: OAuth callback returning 400
-2. Thought: Redirect URI might not match
-3. Action: Checking Google Console configuration
-4. Observed: URI missing /callback suffix
-5. Action: Updating redirect URI in code
-```
-
-### Scenario 5: Comparing Approaches
-
-**User:**
-```
-Compare the OAuth experiment on the oauth-exp branch with the current JWT approach on main.
-```
-
-**Claude:**
-```
-Analyzing differences...
-
-🔍 Authentication Approach Comparison:
-
-main (JWT):
-  + Simpler setup
-  + No external dependencies
-  - Limited to first-party apps
-  - No social login support
-
-oauth-exp (OAuth2):
-  + Supports Google/GitHub social login
-  + Industry standard
-  - More complex token management
-  - Requires external provider setup
-
-Recommendation: Merge oauth-exp with feature flag
-```
-
-## Session Locking
-
-### What is Session Locking?
-
-When `session_id` is configured via environment variable or Docker container ID, GCC **locks** the session to prevent AI from accidentally overriding it.
-
-### Why This Matters
-
-**Problem:** In production environments, you don't want AI to use wrong session:
-- Multi-tenant deployments
-- Containerized environments
-- Fixed project sessions
-
-**Solution:** Lock session to configured value, ignore AI-provided `session_id`
-
-### Locking Conditions
-
-| Configuration | Behavior |
-|:---|:---|
-| `GCC_SESSION_ID` environment variable set | **Locked** - AI cannot override |
-| Docker with valid `HOSTNAME` (≥12 chars) | **Locked** - Uses container ID |
-| No configuration | **Unlocked** - AI can specify sessions |
-
-### Configuration Examples
-
-**Production/Fixed Session:**
-```json
-{
-  "mcpServers": {
-    "gcc": {
-      "command": "gcc-mcp",
-      "env": {
-        "GCC_SERVER_URL": "http://localhost:8000",
-        "GCC_SESSION_ID": "my-production-project"
-      }
-    }
-  }
-}
-```
-
-**Development/Exploration:**
-```json
-{
-  "mcpServers": {
-    "gcc": {
-      "command": "gcc-mcp",
-      "env": {
-        "GCC_SERVER_URL": "http://localhost:8000"
-      }
-    }
-  }
-}
-```
-
-**Docker Deployment:**
-```yaml
-# docker-compose.yml
-services:
-  gcc-server:
-    image: gcc-mem-system
-    environment:
-      - GCC_DATA_ROOT=/data
-      - GCC_PORT=8000
-    volumes:
-      - ./data:/data
-```
-
-Container automatically uses `container-<hostname>` as locked session ID.
-
-## Tool Reference
-
-Claude has access to these GCC tools:
+## Tool Usage Quick Reference
 
 ### Memory Management
-- **gcc_init**: Initialize session (goal, todo, optional session_id)
-- **gcc_branch**: Create exploration branch (branch, purpose)
-- **gcc_commit**: Record checkpoint (branch, contribution, log_entries, metadata_updates)
-- **gcc_merge**: Merge branch to target (source_branch, target_branch, summary)
+- `gcc_init(goal, todo, optional session_id)` - **MANDATORY at project start**
+- `gcc_branch(branch, purpose)` - **MANDATORY for experiments**
+- `gcc_commit(branch, contribution, log_entries, metadata_updates)` - **MANDATORY for completed work**
+- `gcc_merge(source_branch, target_branch, summary)` - Use when integrating work
 
-### Context Retrieval
-- **gcc_context**: Retrieve memory at multiple granularities
-  - No params: Project overview (main.md)
-  - `branch`: Branch summary
-  - `branch + commit_id`: Specific checkpoint detail
-  - `log_tail`: Last N log entries (OTA pattern)
-  - `metadata_segment`: Structured metadata query
+### Context Retrieval (CRITICAL)
+- `gcc_context()` - Project overview (main.md)
+- `gcc_context(branch="name")` - Branch summary
+- `gcc_context(branch="X", commit_id="abc")` - Specific commit detail
+- `gcc_context(log_tail=10)` - Recent fine-grained logs
+- `gcc_context(metadata_segment="status")` - Structured metadata query
 
 ### Analysis & Debugging
-- **gcc_history**: View commit history (limit)
-- **gcc_diff**: Compare commits (from_ref, to_ref)
-- **gcc_show**: View file at ref (ref, path)
-- **gcc_log**: Append fine-grained log entries (branch, entries)
-- **gcc_reset**: Reset to ref (ref, mode, confirm)
+- `gcc_history(limit)` - View commit history
+- `gcc_diff(from_ref, to_ref)` - Compare commits/branches
+- `gcc_show(ref, path)` - View file content at specific point
+- `gcc_log(branch, entries)` - Add fine-grained log entries
+- `gcc_reset(ref, mode, confirm)` - Reset session (use carefully)
 
-## Best Practices
+## Conversation Flow Example
 
-### 1. Initialize Projects Clearly
-```
-Start a GCC session for "Build web scraper for news sites".
-Goals: [Extract article titles, Handle pagination, Store in PostgreSQL].
-```
-
-**Why:** Clear initialization provides strong foundation for all subsequent work.
-
-### 2. Use Branches for Exploration
-```
-Create a branch "selenium-approach" to test browser automation vs simple HTTP requests.
-```
-
-**Why:** Keeps main stable. Easy to compare approaches with `gcc_diff`.
-
-### 3. Log Observations, Not Just Actions
-```
-Use OTA pattern: Log what you observe, your reasoning, and then the action.
-```
-
-**Example:**
-```yaml
-- Observed: Pagination links are JavaScript-generated
-- Thought: BeautifulSoup won't work, need browser automation
-- Action: Switching to Selenium for this site
-```
-
-**Why:** Traceable reasoning chains help debug and understand decisions later.
-
-### 4. Commit Meaningful Checkpoints
-```
-When you complete a meaningful unit of work, create a checkpoint.
-Include: What was done, why it matters, current status.
-```
-
-**Example:**
-```
-Contribution: "Implemented OAuth2 with Google social login"
-Metadata: {"auth_methods": ["jwt", "google-oauth"], "status": "in-testing"}
-```
-
-**Why:** High-level summaries complement fine-grained logs.
-
-### 5. Retrieve Context at Right Granularity
-```
-"What's the project status?"           → Overview (main.md)
-"What's happening on feature X?"     → Branch summary
-"Show me recent detailed work"        → Log tail (OTA)
-"What's the current test coverage?" → Metadata query
-```
-
-**Why:** Different questions need different granularities.
-
-### 6. Review History Before Changes
-```
-Before refactoring, show me commit history to understand the evolution.
-```
-
-**Why:** Historical context prevents repeating mistakes.
-
-### 7. Use Diff to Compare Approaches
-```
-Compare the experiment branch with main before deciding which to keep.
-```
-
-**Why:** Data-driven decision making.
-
-## Advanced Usage
-
-### Multi-Project Setup
-```json
-{
-  "mcpServers": {
-    "gcc-web-app": {
-      "command": "gcc-mcp",
-      "env": {
-        "GCC_SERVER_URL": "http://localhost:8000",
-        "GCC_SESSION_ID": "web-app-prod"
-      }
-    },
-    "gcc-data-pipeline": {
-      "command": "gcc-mcp",
-      "env": {
-        "GCC_SERVER_URL": "http://localhost:8001",
-        "GCC_SESSION_ID": "data-pipeline-prod"
-      }
-    }
-  }
-}
-```
-
-### Team Collaboration
-Store session data in shared volume:
-```yaml
-# docker-compose.yml
-services:
-  gcc-server:
-    volumes:
-      - nfs-share:/data
-
-volumes:
-  nfs-share:
-    driver: local
-    driver_opts:
-      type: nfs
-      device: ":/path/to/shared"
-```
-
-Team members can:
-- Share context across different AI instances
-- Review each other's reasoning chains
-- Collaborate on same memory base
-
-## Example Conversation Flow
+### BAD Example (NOT using GCC properly):
 
 ```
-You: Initialize a GCC session for "Build a CLI tool for file management".
-     TODO: [Implement file search, Add batch operations, Create progress UI].
+User: "I'm building a REST API. Let's try OAuth for auth."
 
-Claude: ✅ Created session "mcp-12345"
-      Set main.md with goal and TODO items.
+AI: "Sure! Here's how to implement OAuth2..."
 
----
+[30 minutes later]
 
-You: Create a branch "fuzzy-search" to experiment with fuzzy matching algorithms.
+User: "What was our original authentication plan?"
 
-Claude: ✅ Created branch "fuzzy-search"
-      Purpose: "Testing fuzzy matching for better file search"
-      Isolated from main branch
-
----
-
-You: Log your progress as you implement the fuzzy search feature.
-
-Claude: 📝 [OTA Entry 1]
-      - Observed: Current exact matching fails on typos
-      - Thought: Users often mistype file names
-      - Action: Researching fuzzywuzzy library
-
-      📝 [OTA Entry 2]
-      - Observed: fuzzywuzzy provides ratio-based matching
-      - Thought: Need to test threshold for best UX
-      - Action: Implementing with 85% ratio threshold
-
-      ✅ Checkpoint
-      Contribution: "Implemented fuzzy search with fuzzywuzzy"
-      Metadata: {"status": "testing", "threshold": 0.85}
-
----
-
-You: What have we accomplished so far?
-
-Claude: 📋 Project Overview
-      Session: mcp-12345
-      Goal: Build a CLI tool for file management
-
-      📋 TODO Progress
-      - [✓] Implement file search (with fuzzy matching!)
-      - [ ] Add batch operations
-      - [ ] Create progress UI
-
-      📊 Recent Activity
-      Branch: fuzzy-search
-      Latest: "Implemented fuzzy search with 85% threshold"
-      Test Results: 92% user satisfaction in testing
-
----
-
-You: Compare the fuzzy search implementation with the main branch approach.
-
-Claude: 🔍 Comparing Approaches...
-
-      main (exact matching):
-        Pros: Faster (O(n)), simpler
-        Cons: Fails on typos, poor UX
-
-      fuzzy-search (fuzzy matching):
-        Pros: Handles typos, better UX (92% satisfaction)
-        Cons: Slower (O(n*m)), more complex
-
-      📊 Recommendation: Merge fuzzy-search with configurable threshold
-      Add FUZZY_THRESHOLD env variable to let users tune
-
----
-
-You: Good analysis! Merge the fuzzy-search branch into main.
-
-Claude: ✅ Merging fuzzy-search → main
-      Merge Summary: "Added fuzzy file search with 85% match threshold"
-
-      Updated main.md TODO:
-      - [✓] Implement file search
-      - [ ] Add batch operations
-      - [ ] Create progress UI
+AI: "Um... I think it was JWT? Let me check..."
 ```
 
-## Troubleshooting
+**PROBLEMS:**
+- ❌ No persistent memory established
+- ❌ Can't recall what was decided earlier
+- ❌ No audit trail of experiments
+- ❌ Context window overflow likely
 
-### "Failed to connect to GCC server"
+### GOOD Example (using GCC properly):
+
 ```
-Ensure the server is running:
-docker-compose ps
+User: "I'm building a REST API. Let's try OAuth for auth."
 
-If not running:
-docker-compose up -d
+AI: [Calls gcc_init]
+  ✅ "Initialized session 'rest-api-2025'"
+  ✅ "Set goal: Build REST API with authentication"
+  ✅ "Set TODO: [Design schema, Choose auth method, Implement auth, Add tests]"
 
-Check server logs:
-docker-compose logs -f gcc-server
+[Calls gcc_branch]
+  ✅ "Created branch 'oauth-experiment'"
+  ✅ "Purpose: Testing OAuth2 vs JWT authentication"
+
+AI: "I'll explore OAuth2 in the oauth-experiment branch.
+  This keeps our main approach stable."
+
+[Work happens with OTA logging]
+  ✅ [gcc_log] "Observed: OAuth callback needs redirect URI"
+  ✅ [gcc_log] "Thought: Must configure Google Console"
+  ✅ [gcc_log] "Action: Setting up OAuth client credentials"
+
+[Calls gcc_commit]
+  ✅ "Commit: 'Implemented OAuth2 login flow'"
+  ✅ "Metadata: {oauth_status: 'testing', auth_methods: ['jwt', 'oauth']}"
+
+[10 minutes later]
+
+User: "What was our original authentication plan?"
+
+AI: [Calls gcc_context(branch="main")]
+  ✅ Retrieves: "Main branch still using JWT approach"
+  ✅ "OAuth experiment is isolated in oauth-experiment branch"
+
+User: "Compare them for me."
+
+AI: [Calls gcc_diff(from_ref="main", to_ref="oauth-experiment")]
+  ✅ Analyzes actual differences
+  ✅ Provides detailed comparison
+  ✅ Makes data-driven recommendation
 ```
 
-### "Session not found"
-```
-Check your session configuration:
-1. If locked (GCC_SESSION_ID set): Verify it matches intended session
-2. If unlocked: Check if AI is using correct session_id parameter
-3. List existing sessions: ls /data/sessions/
-```
+**BENEFITS:**
+- ✅ Full memory from start
+- ✅ Clear audit trail
+- ✅ Can retrieve any detail instantly
+- ✅ Experiments isolated
+- ✅ Data-driven decisions
 
-### "Branch not found"
-```
-List available branches:
-curl -X POST http://localhost:8000/context \
-  -H "Content-Type: application/json" \
-  -d '{"session_id": "your-session"}' | jq '.branches'
-```
+## Common Situations & How to Handle
 
-### Need to reset session?
-```
-Delete specific session:
-rm -rf /data/sessions/your-session-id
+### Situation 1: User starts new work
 
-OR reset via API (with confirmation):
-curl -X POST http://localhost:8000/reset \
-  -H "Content-Type: application/json" \
-  -d '{"ref": "HEAD", "mode": "hard", "confirm": true}'
+```
+User: "I need to [do X, Y, Z]"
+
+YOU MUST:
+1. Call gcc_init(goal="[X, Y, Z]", todo=[breakdown into tasks])
+2. Confirm initialization
+3. Then proceed with implementation
 ```
 
-## Theoretical Foundation
+### Situation 2: User asks about current state
 
-### Why Git-Backed Memory?
-
-Traditional LLM context management:
-- **Ephemeral**: Lost when conversation ends
-- **Unstructured**: Flat context window
-- **Opaque**: Can't see evolution
-
-GCC provides:
-- **Persistent**: Git ensures nothing is lost
-- **Structured**: Hierarchy (Roadmap → Branch → Commit → Log)
-- **Transparent**: Full history with diffs
-
-### Context as Version Control
-
-GCC treats agent context like **software code**:
-- Each change is a commit
-- Branches enable parallel exploration
-- Diffs show what changed and why
-- History provides evolution trace
-
-### Multi-Granularity Memory
-
-Humans think at different levels:
-- **High level**: "What are we building?" (main.md)
-- **Mid level**: "What did we accomplish?" (commit.md)
-- **Low level**: "What just happened?" (log.md - OTA)
-
-GCC supports all levels, enabling **right-granularity retrieval** for the question.
-
-## Resources
-
-- [Paper: "Git Context Controller: Manage the Context of LLM-based Agents like Git"](https://arxiv.org/abs/2501.13245)
-- [GCC Documentation](../../README.md)
-- [API Reference](../../README.md#api-reference)
-- [Session Locking Details](../../README.md#session-locking)
-
----
-
-**Need help?**
-```bash
-# Check server status
-docker-compose ps
-
-# View real-time logs
-docker-compose logs -f gcc-server
-
-# Test connection
-curl http://localhost:8000/health
 ```
+User: "Where are we with [feature X]?"
+
+YOU MUST:
+1. Call gcc_context() or gcc_context(branch="feature-x")
+2. Answer based on retrieved data
+3. NOT from memory or context window
+```
+
+### Situation 3: User wants to try alternative
+
+```
+User: "What if we tried [alternative approach]?"
+
+YOU MUST:
+1. Call gcc_branch with descriptive branch name
+2. Document purpose clearly
+3. Work in that isolated space
+4. Use gcc_commit when done
+```
+
+### Situation 4: User asks for comparison
+
+```
+User: "Which approach is better - A or B?"
+
+YOU MUST:
+1. Call gcc_history for both branches
+2. Call gcc_diff to compare
+3. Provide analysis based on actual project data
+4. Make recommendation with evidence
+```
+
+### Situation 5: User reports problem
+
+```
+User: "[X] is broken / not working"
+
+YOU MUST:
+1. Call gcc_context(log_tail=20) to see recent activity
+2. Use gcc_log to document debugging process
+3. When fixed, use gcc_commit to record solution
+```
+
+## What NOT to Do
+
+### ❌ DON'T: Rely on context window
+
+```
+BAD: "As I remember from earlier in our conversation..."
+
+GOOD: [Calls gcc_context] "According to our commit history..."
+```
+
+### ❌ DON'T: Skip initialization
+
+```
+BAD: [Starts implementing without calling gcc_init]
+
+GOOD: [Calls gcc_init first] "Let me initialize our session for this work..."
+```
+
+### ❌ DON'T: Mix exploration with stable code
+
+```
+BAD: [Experiments directly on main branch]
+
+GOOD: [Creates branch for experiments]
+```
+
+### ❌ DON'T: Answer without retrieval
+
+```
+BAD: "I think our test coverage is around 70%..."
+
+GOOD: [Calls gcc_context(metadata_segment="test_coverage")]
+"According to our metadata, test coverage is 78%..."
+```
+
+### ❌ DON'T: Let work be lost
+
+```
+BAD: [Completes work without committing]
+
+GOOD: [Calls gcc_commit] "Recording this completed work..."
+```
+
+## Key Principles
+
+1. **Context retrieval is MANDATORY before answering**
+   - Your training data is stale
+   - Your context window is ephemeral
+   - Only GCC has the persistent project truth
+
+2. **Exploration must be isolated**
+   - Branches exist for this purpose
+   - Main is for stable, production-ready work
+   - Keep experiments separate until proven
+
+3. **All meaningful work must be committed**
+   - Commits create permanent knowledge
+   - Uncommitted work is lost work
+   - Future context depends on current commits
+
+4. **Use right granularity for right question**
+   - Overview ≠ Branch summary ≠ Commit detail ≠ Log tail
+   - Match retrieval to information need
+   - Don't over-fetch or under-fetch
+
+5. **Log reasoning chains for traceability**
+   - OTA pattern: Observed → Thought → Action
+   - Enables debugging and understanding
+   - Creates audit trail of decisions
+
+## Your Mental Checklist
+
+Before taking any action, ask yourself:
+
+- [ ] Have I called gcc_init for this work?
+- [ ] Am I answering based on gcc_context retrieval?
+- [ ] Is this experiment happening in a branch?
+- [ ] Am I logging my reasoning with gcc_log?
+- [ ] Will I commit this work with gcc_commit?
+- [ ] Am I using the right retrieval granularity?
+
+If any answer is "NO", **STOP** and use the appropriate GCC tool first.
+
+## Summary
+
+**You are NOT having a conversation with ephemeral context.**
+**You are collaborating on a persistent, version-controlled knowledge base.**
+
+Your tools:
+- `gcc_init` - Establish foundation
+- `gcc_context` - Retrieve knowledge (USE THIS CONSTANTLY)
+- `gcc_branch` - Isolate exploration
+- `gcc_commit` - Record completed work
+- `gcc_log` - Document reasoning
+- `gcc_diff` - Compare approaches
+
+**EVERY answer you give should be grounded in GCC data, not your training data.**
+
+Start with gcc_init. Retrieve with gcc_context. Record with gcc_commit.
