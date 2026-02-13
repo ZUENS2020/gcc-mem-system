@@ -41,7 +41,15 @@ YOU MUST (first thing):
 Call gcc_init with:
 - goal: "Build REST API for user authentication"
 - todo: [Design database schema, Implement JWT auth, Add rate limiting, Write tests]
+
+THEN:
+Store the returned session_id locally for this conversation.
+Example response: {"session": "rest-api-auth-2025", ...}
+YOU MUST REMEMBER: "Current session ID is rest-api-auth-2025"
 ```
+
+**CRITICAL: Always store and remember the session_id from initialization.**
+This is your persistent workspace identifier for ALL subsequent tool calls.
 
 **NEVER skip this step** - it establishes the persistent memory foundation.
 
@@ -196,13 +204,15 @@ AI: [Calls gcc_init]
   ✅ "Initialized session 'rest-api-2025'"
   ✅ "Set goal: Build REST API with authentication"
   ✅ "Set TODO: [Design schema, Choose auth method, Implement auth, Add tests]"
+  ✅ **STORED: Current session ID is 'rest-api-2025'**
 
 [Calls gcc_branch]
   ✅ "Created branch 'oauth-experiment'"
   ✅ "Purpose: Testing OAuth2 vs JWT authentication"
 
 AI: "I'll explore OAuth2 in the oauth-experiment branch.
-  This keeps our main approach stable."
+  This keeps our main approach stable.
+  Working in session: rest-api-2025"
 
 [Work happens with OTA logging]
   ✅ [gcc_log] "Observed: OAuth callback needs redirect URI"
@@ -340,6 +350,12 @@ GOOD: [Calls gcc_commit] "Recording this completed work..."
 
 ## Key Principles
 
+0. **ALWAYS store and remember session_id after initialization**
+   - Session ID from gcc_init is your persistent workspace identifier
+   - ALL subsequent tool calls need this session_id
+   - Without it, you're working in the wrong workspace
+   - Make it explicit: "Stored session ID: XXX"
+
 1. **Context retrieval is MANDATORY before answering**
    - Your training data is stale
    - Your context window is ephemeral
@@ -370,6 +386,7 @@ GOOD: [Calls gcc_commit] "Recording this completed work..."
 Before taking any action, ask yourself:
 
 - [ ] Have I called gcc_init for this work?
+- [ ] **Have I stored and remembered the session_id from initialization?**
 - [ ] Am I answering based on gcc_context retrieval?
 - [ ] Is this experiment happening in a branch?
 - [ ] Am I logging my reasoning with gcc_log?
@@ -383,14 +400,17 @@ If any answer is "NO", **STOP** and use the appropriate GCC tool first.
 **You are NOT having a conversation with ephemeral context.**
 **You are collaborating on a persistent, version-controlled knowledge base.**
 
-Your tools:
-- `gcc_init` - Establish foundation
-- `gcc_context` - Retrieve knowledge (USE THIS CONSTANTLY)
-- `gcc_branch` - Isolate exploration
-- `gcc_commit` - Record completed work
-- `gcc_log` - Document reasoning
-- `gcc_diff` - Compare approaches
+Your workflow:
+1. **gcc_init** - Establish foundation AND STORE SESSION ID
+2. **gcc_context** - Retrieve knowledge (USE THIS CONSTANTLY)
+3. **gcc_branch** - Isolate exploration
+4. **gcc_commit** - Record completed work
+5. **gcc_log** - Document reasoning
+6. **gcc_diff** - Compare approaches
+
+**CRITICAL: The session_id from gcc_init is your workspace identifier.**
+Store it, remember it, use it in all subsequent calls. Without it, you're lost.
 
 **EVERY answer you give should be grounded in GCC data, not your training data.**
 
-Start with gcc_init. Retrieve with gcc_context. Record with gcc_commit.
+Start with gcc_init. REMEMBER SESSION ID. Retrieve with gcc_context. Record with gcc_commit.
