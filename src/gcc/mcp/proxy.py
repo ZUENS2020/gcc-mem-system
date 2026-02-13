@@ -35,7 +35,7 @@ COMMIT_PROMPT_GUIDE = (
 TOOLS = [
     {
         "name": "gcc_init",
-        "description": "Initialize a session memory store. Creates main.md (goal + todo) and prepares a git-backed workspace for memory commits. IMPORTANT: Use English only for all text values to avoid encoding issues. All paths are automatically managed by the server using session_id.",
+        "description": "Initialize a session memory store. Creates main.md (goal + todo) and prepares a git-backed workspace for memory commits. MANDATORY: After initialization, you MUST store the returned 'session' field in .claude/session.id file (one line, no formatting). This is your ONLY persistent workspace identifier for all subsequent tool calls. IMPORTANT: Use English only for all text values to avoid encoding issues. All paths are automatically managed by the server using session_id.",
         "inputSchema": {
             "type": "object",
             "properties": {
