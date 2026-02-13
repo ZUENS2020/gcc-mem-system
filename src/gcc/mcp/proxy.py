@@ -296,6 +296,7 @@ def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, A
 
     Raises:
         ValueError: If tool name is unknown
+        ConnectionError: If unable to connect to GCC server
     """
     mapping = {
         "gcc_init": "/init",
@@ -314,7 +315,20 @@ def _handle_tools_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, A
 
     # Server handles path management - just forward arguments
     payload = _ensure_session_id(arguments)
-    return _post(mapping[tool_name], payload)
+
+    try:
+        return _post(mapping[tool_name], payload)
+    except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+        server_url = _server_url()
+        session_env = os.environ.get(SESSION_ID_ENV, "not set")
+        hostname_env = os.environ.get("HOSTNAME", "not set")
+
+        raise ConnectionError(
+            f"Failed to connect to GCC server at {server_url}. "
+            f"Please ensure the server is running. "
+            f"Environment: GCC_SERVER_URL={os.environ.get(SERVER_URL_ENV, 'default')}, "
+            f"GCC_SESSION_ID={session_env}, HOSTNAME={hostname_env}"
+        ) from exc
 
 
 def _write_response(payload: Dict[str, Any]) -> None:
